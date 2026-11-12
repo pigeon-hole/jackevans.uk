@@ -89,6 +89,12 @@ body {
   border-top: 0 !important;
   pointer-events: none;
 }
+.clone-skeleton {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  opacity: 0;
+}
 .subj-box + .subj-box { border-top: 4px solid var(--yellow); }
 
 .box-kicker {
@@ -880,15 +886,26 @@ function rectFrame(r) {
   return { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' };
 }
 
-function makeBoxClone(boxEl, rect) {
+// The copy carries a blank version of the subject page (header picture at its real height,
+// paper below). Fading that in while the box grows means the final hand-over to the real
+// page only adds the text and cards.
+function makeBoxClone(boxEl, rect, s, cat, hdrH) {
   removeBoxClone();
   const c = boxEl.cloneNode(true);
   c.removeAttribute('data-subject');
   c.classList.add('subj-box--clone');
   Object.assign(c.style, rectFrame(rect));
+  const sk = document.createElement('div');
+  sk.className = 'clone-skeleton';
+  sk.innerHTML = `<div class="clone-skeleton-hdr" style="height:${hdrH}px; background:${headerBg(s, cat)}; filter:${headerFilter(s, cat)};"></div>`;
+  c.appendChild(sk);
   document.getElementById('page').appendChild(c);
   boxClone = c;
   return c;
+}
+function subjectHeaderHeight() {
+  const hdr = document.querySelector('#subj-overlay .subj-hdr');
+  return hdr ? hdr.getBoundingClientRect().height : 0;
 }
 function removeBoxClone() {
   if (boxClone) { boxClone.remove(); boxClone = null; }
@@ -923,10 +940,13 @@ function openSubject(subjId, boxEl) {
 
   const quick = reduceMotion.matches;
   const from  = boxRect(boxEl);
-  const clone = makeBoxClone(boxEl, from);
+  const clone = makeBoxClone(boxEl, from, s, currentCat, subjectHeaderHeight());
   const grow  = clone.animate([rectFrame(from), rectFrame(fullRect())],
     { duration: quick ? 0 : EXPAND_MS, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
-  overlayAnims = [grow];
+  const morph = clone.querySelector('.clone-skeleton').animate([
+    { opacity: 0 }, { opacity: 0, offset: 0.08 }, { opacity: 1, offset: 0.6 }, { opacity: 1 }
+  ], { duration: quick ? 0 : EXPAND_MS, fill: 'forwards' });
+  overlayAnims = [grow, morph];
 
   grow.finished.then(() => {
     if (token !== animToken) return;
@@ -1092,14 +1112,19 @@ function closeSubject() {
   // If the open sequence is still running, carry on from wherever it has got to.
   const pageR = document.getElementById('page').getBoundingClientRect();
   let start = fullRect();
+  let startMorph = 1;
   if (boxClone) {
     const c = boxClone.getBoundingClientRect();
     start = { top: c.top - pageR.top, left: c.left - pageR.left, width: c.width, height: c.height };
+    startMorph = +getComputedStyle(boxClone.querySelector('.clone-skeleton')).opacity;
   }
   const startOpacity = getComputedStyle(overlay).opacity;
+  const hdrH = subjectHeaderHeight();
   stopOverlayAnims();
   overlay.style.opacity = startOpacity;
-  const clone = makeBoxClone(boxEl, start);
+  const clone = makeBoxClone(boxEl, start, subjects[currentSubjId], currentCat, hdrH);
+  const skeleton = clone.querySelector('.clone-skeleton');
+  skeleton.style.opacity = startMorph;
 
   const quick = reduceMotion.matches;
   const fade = overlay.animate([{ opacity: startOpacity }, { opacity: 0 }],
@@ -1109,9 +1134,13 @@ function closeSubject() {
   fade.finished.then(() => {
     if (token !== animToken) return;
     overlay.style.display = 'none';
+    const duration = quick ? 0 : SHRINK_MS;
     const shrink = clone.animate([rectFrame(start), rectFrame(boxRect(boxEl))],
-      { duration: quick ? 0 : SHRINK_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
-    overlayAnims.push(shrink);
+      { duration, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+    const unmorph = skeleton.animate([
+      { opacity: startMorph }, { opacity: 0, offset: 0.6 }, { opacity: 0 }
+    ], { duration, fill: 'forwards' });
+    overlayAnims.push(shrink, unmorph);
     return shrink.finished;
   }).then(() => {
     if (token !== animToken) return;
