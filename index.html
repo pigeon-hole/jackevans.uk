@@ -710,6 +710,10 @@ const subjects = {
     bgColor: '#00B84C',
     bgImage: 'images/geography-world-map.jpg',
     bgWash: 'rgba(240,226,192,0.35)',
+    // Photo behind a tab's cards; tabs not listed keep the plain paper background.
+    catBackgrounds: {
+      destruction: { src: 'images/geography-destruction.jpg', position: 'center 40%' }
+    },
     desc: 'Satellite imagery lets us observe change at scales invisible on the ground. These are examples of destruction, creation and natural process, documented from above.',
     categories: ['Destruction', 'Creation', 'Nature'],
     defaultCat: 'destruction',
@@ -883,6 +887,13 @@ function subjectBg(s) {
   return `linear-gradient(${s.bgWash}, ${s.bgWash}), url(${s.bgImage}) ${s.bgPosition || 'center'} / cover, ${s.bgColor}`;
 }
 
+// A heavy paper wash keeps the text and cards readable over the photo.
+function contentBg(s, cat) {
+  const b = s.catBackgrounds && s.catBackgrounds[cat];
+  if (!b) return 'var(--paper)';
+  return `linear-gradient(rgba(242,238,225,0.8), rgba(242,238,225,0.8)), url(${b.src}) ${b.position || 'center'} / cover, var(--paper)`;
+}
+
 function buildSubjectHTML(s, activeCat) {
   const tabs = s.categories.map(cat => {
     const key = cat.toLowerCase();
@@ -896,7 +907,7 @@ function buildSubjectHTML(s, activeCat) {
       <div class="subj-name">${s.label}</div>
       <div class="subj-tabs">${tabs}</div>
     </div>
-    <div class="subj-content">
+    <div class="subj-content" style="background:${contentBg(s, activeCat)};">
       ${s.desc ? `<p class="subj-desc">${s.desc}</p>` : ''}
       ${activeCat ? `<div class="cat-label">${activeCat}</div>` : ''}
       <div class="cards-grid" id="cards-grid">${buildCards(s, activeCat)}</div>
@@ -991,6 +1002,7 @@ function onOverlayClick(e) {
 
     setTimeout(() => {
       grid.innerHTML = buildCards(subjects[currentSubjId], key);
+      document.querySelector('.subj-content').style.background = contentBg(subjects[currentSubjId], key);
       grid.style.opacity = '1';
     }, 140);
   }
