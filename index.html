@@ -413,10 +413,9 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   padding: 16px 20px 14px;
+  background: var(--yellow);
+  color: var(--ink);
 }
-.cmp-head.hdr--yellow { color: var(--ink); }
-.cmp-head.hdr--red    { color: white; }
-.cmp-head.hdr--blue   { color: white; }
 
 .cmp-kicker {
   font-size: 8.5px;
@@ -1104,7 +1103,7 @@ function openCompare(ex) {
 
   pop.innerHTML = `
   <div class="cmp-panel">
-    <div class="cmp-head ${s.hdrClass}" style="background:${subjectBg(s)};">
+    <div class="cmp-head">
       <div>
         <div class="cmp-kicker">${s.label} · ${currentCat}</div>
         <div class="cmp-title">${ex.title}</div>
@@ -1149,7 +1148,7 @@ function openCollection(col) {
 
   pop.innerHTML = `
   <div class="cmp-panel cmp-panel--collection">
-    <div class="cmp-head ${s.hdrClass}" style="background:${subjectBg(s)};">
+    <div class="cmp-head">
       <div>
         <div class="cmp-kicker">${s.label} · ${currentCat}</div>
         <div class="cmp-title">${col.title}</div>
