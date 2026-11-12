@@ -156,7 +156,10 @@ body {
 .box--red .box-arrow       { color: rgba(255,255,255,0.55); }
 
 .box--blue {
-  background: var(--blue);
+  background:
+    linear-gradient(rgba(10,10,10,0.5), rgba(10,10,10,0.5)),
+    url(images/culture.jpg) center / cover,
+    var(--blue);
   color: white;
 }
 .box--blue .box-kicker     { color: rgba(255,255,255,0.5); }
@@ -809,6 +812,8 @@ subjects.culture = {
   colorClass: 'box--blue',
   hdrClass: 'hdr--blue',
   bgColor: '#0038FF',
+  bgImage: 'images/culture.jpg',
+  bgWash: 'rgba(10,10,10,0.5)',
   desc: '',
   categories: [],
   defaultCat: null,
