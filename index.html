@@ -81,6 +81,14 @@ body {
   transition: filter 0.15s;
 }
 .subj-box:hover { filter: brightness(0.96); }
+.subj-box--clone {
+  position: absolute;
+  z-index: 19;
+  flex: none;
+  margin: 0;
+  border-top: 0 !important;
+  pointer-events: none;
+}
 .subj-box + .subj-box { border-top: 4px solid var(--yellow); }
 
 .box-kicker {
@@ -848,18 +856,43 @@ let currentSubjId  = null;
 let isSubjectOpen  = false;
 let overlayAnims   = [];
 
-const OPEN_MS  = 560;
-const CLOSE_MS = 440;
+const EXPAND_MS = 520;
+const SHRINK_MS = 440;
+const FADE_MS   = 220;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-// The overlay is laid out at full size once; only its clip window animates, so no
-// layout or background re-cropping happens per frame.
-function clipToBox(boxEl) {
-  const page = document.getElementById('page').getBoundingClientRect();
-  const r = getBoxPos(boxEl);
-  return `inset(${r.top}px ${page.width - r.left - r.width}px ${page.height - r.top - r.height}px ${r.left}px)`;
+// Opening grows a solid copy of the clicked box to full screen, then fades the subject
+// page in over it; closing reverses that. animToken lets a newer click abandon an
+// older sequence part-way.
+let boxClone  = null;
+let animToken = 0;
+
+function boxRect(boxEl) {
+  const r  = getBoxPos(boxEl);
+  const bt = parseFloat(getComputedStyle(boxEl).borderTopWidth) || 0;
+  return { top: r.top + bt, left: r.left, width: r.width, height: r.height - bt };
 }
-const CLIP_FULL = 'inset(0px 0px 0px 0px)';
+function fullRect() {
+  const p = document.getElementById('page').getBoundingClientRect();
+  return { top: 0, left: 0, width: p.width, height: p.height };
+}
+function rectFrame(r) {
+  return { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' };
+}
+
+function makeBoxClone(boxEl, rect) {
+  removeBoxClone();
+  const c = boxEl.cloneNode(true);
+  c.removeAttribute('data-subject');
+  c.classList.add('subj-box--clone');
+  Object.assign(c.style, rectFrame(rect));
+  document.getElementById('page').appendChild(c);
+  boxClone = c;
+  return c;
+}
+function removeBoxClone() {
+  if (boxClone) { boxClone.remove(); boxClone = null; }
+}
 
 // The header is 50% taller than its content needs; its natural height varies with screen width.
 function sizeSubjectHeader() {
@@ -875,6 +908,7 @@ function stopOverlayAnims() {
 }
 
 function openSubject(subjId, boxEl) {
+  const token = ++animToken;
   currentSubjId = subjId;
   isSubjectOpen = true;
   const s = subjects[subjId];
@@ -882,25 +916,31 @@ function openSubject(subjId, boxEl) {
 
   stopOverlayAnims();
   const overlay = document.getElementById('subj-overlay');
-  overlay.style.cssText = `display: block; inset: 0; background: ${subjectBg(s)};`;
+  overlay.style.cssText = `display: block; inset: 0; background: ${subjectBg(s)}; opacity: 0; pointer-events: none;`;
   overlay.innerHTML = buildSubjectHTML(s, currentCat);
   sizeSubjectHeader();
   overlay.addEventListener('click', onOverlayClick);
 
-  const duration = reduceMotion.matches ? 0 : OPEN_MS;
-  const easing   = 'cubic-bezier(0.22, 1, 0.36, 1)';
-  overlayAnims = [
-    overlay.animate([
-      { clipPath: clipToBox(boxEl), opacity: 0 },
-      { opacity: 1, offset: 0.2 },
-      { clipPath: CLIP_FULL, opacity: 1 }
-    ], { duration, easing }),
-    overlay.querySelector('.subj-view').animate([
-      { opacity: 0 },
-      { opacity: 0, offset: 0.3 },
-      { opacity: 1 }
-    ], { duration, easing: 'ease-out' })
-  ];
+  const quick = reduceMotion.matches;
+  const from  = boxRect(boxEl);
+  const clone = makeBoxClone(boxEl, from);
+  const grow  = clone.animate([rectFrame(from), rectFrame(fullRect())],
+    { duration: quick ? 0 : EXPAND_MS, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
+  overlayAnims = [grow];
+
+  grow.finished.then(() => {
+    if (token !== animToken) return;
+    overlay.style.pointerEvents = '';
+    const fade = overlay.animate([{ opacity: 0 }, { opacity: 1 }],
+      { duration: quick ? 0 : FADE_MS, easing: 'ease-out', fill: 'forwards' });
+    overlayAnims.push(fade);
+    return fade.finished;
+  }).then(() => {
+    if (token !== animToken) return;
+    overlay.style.opacity = '1';
+    stopOverlayAnims();
+    removeBoxClone();
+  }).catch(() => {});
 }
 
 // The wash keeps header text legible over the picture: light under dark text, dark under white.
@@ -1043,33 +1083,43 @@ function closeSubject() {
   if (!isSubjectOpen) return;
   isSubjectOpen = false;
 
+  const token   = ++animToken;
   const overlay = document.getElementById('subj-overlay');
   const boxEl   = document.querySelector(`.subj-box[data-subject="${currentSubjId}"]`);
   overlay.removeEventListener('click', onOverlayClick);
   overlay.style.pointerEvents = 'none';
 
+  // If the open sequence is still running, carry on from wherever it has got to.
+  const pageR = document.getElementById('page').getBoundingClientRect();
+  let start = fullRect();
+  if (boxClone) {
+    const c = boxClone.getBoundingClientRect();
+    start = { top: c.top - pageR.top, left: c.left - pageR.left, width: c.width, height: c.height };
+  }
+  const startOpacity = getComputedStyle(overlay).opacity;
   stopOverlayAnims();
-  const duration = reduceMotion.matches ? 0 : CLOSE_MS;
-  const shrink = overlay.animate([
-    { clipPath: CLIP_FULL, opacity: 1 },
-    { opacity: 1, offset: 0.7 },
-    { clipPath: clipToBox(boxEl), opacity: 0 }
-  ], { duration, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
-  overlayAnims = [
-    shrink,
-    overlay.querySelector('.subj-view').animate([
-      { opacity: 1 },
-      { opacity: 0, offset: 0.4 },
-      { opacity: 0 }
-    ], { duration, fill: 'forwards' })
-  ];
+  overlay.style.opacity = startOpacity;
+  const clone = makeBoxClone(boxEl, start);
 
-  shrink.onfinish = () => {
-    stopOverlayAnims();
+  const quick = reduceMotion.matches;
+  const fade = overlay.animate([{ opacity: startOpacity }, { opacity: 0 }],
+    { duration: quick ? 0 : FADE_MS, easing: 'ease-in', fill: 'forwards' });
+  overlayAnims = [fade];
+
+  fade.finished.then(() => {
+    if (token !== animToken) return;
     overlay.style.display = 'none';
+    const shrink = clone.animate([rectFrame(start), rectFrame(boxRect(boxEl))],
+      { duration: quick ? 0 : SHRINK_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+    overlayAnims.push(shrink);
+    return shrink.finished;
+  }).then(() => {
+    if (token !== animToken) return;
+    stopOverlayAnims();
+    removeBoxClone();
     currentSubjId = null;
     currentCat    = null;
-  };
+  }).catch(() => {});
 }
 
 /* ===================== BEFORE / AFTER POP-UP ===================== */
