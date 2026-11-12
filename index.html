@@ -183,6 +183,7 @@ body {
 
 /* Subject header (coloured area) */
 .subj-hdr {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -191,6 +192,10 @@ body {
 /* Extra height (see sizeSubjectHeader) opens up between "back" and the title. */
 .subj-hdr .subj-back { align-self: flex-start; margin-bottom: auto; }
 .subj-hdr .subj-name { margin-top: 14px; }
+
+/* The picture sits on its own layer so a filter can tint it without touching the text. */
+.subj-hdr-bg { position: absolute; inset: 0; z-index: 0; }
+.subj-hdr > :not(.subj-hdr-bg) { position: relative; z-index: 1; }
 
 .subj-back {
   font-size: 13px;
@@ -719,7 +724,7 @@ const subjects = {
     catBackgrounds: {
       destruction: { src: 'images/geography-destruction.jpg', position: 'center 30%', wash: 'rgba(240,226,192,0.45)' },
       creation:    { src: 'images/geography-creation.jpg',    position: 'center 70%', wash: 'rgba(240,226,192,0.25)' },
-      nature:      { src: 'images/geography-nature-stop.jpg', position: 'center 40%', wash: 'rgba(240,226,192,0.3)' }
+      nature:      { src: 'images/geography-nature-stop.jpg', position: 'center 40%', wash: 'rgba(240,226,192,0.3)', filter: 'sepia(0.2)' }
     },
     desc: 'Satellite imagery lets us observe change at scales invisible on the ground. These are examples of destruction, creation and natural process, documented from above.',
     categories: ['Destruction', 'Creation', 'Nature'],
@@ -911,6 +916,11 @@ function headerBg(s, cat) {
   return `linear-gradient(${wash}, ${wash}), url(${b.src}) ${b.position || 'center'} / cover, ${s.bgColor}`;
 }
 
+function headerFilter(s, cat) {
+  const b = s.catBackgrounds && s.catBackgrounds[cat];
+  return (b && b.filter) || 'none';
+}
+
 function buildSubjectHTML(s, activeCat) {
   const tabs = s.categories.map(cat => {
     const key = cat.toLowerCase();
@@ -919,7 +929,8 @@ function buildSubjectHTML(s, activeCat) {
 
   return `
   <div class="subj-view">
-    <div class="subj-hdr ${s.hdrClass}" style="background:${headerBg(s, activeCat)};">
+    <div class="subj-hdr ${s.hdrClass}">
+      <div class="subj-hdr-bg" style="background:${headerBg(s, activeCat)}; filter:${headerFilter(s, activeCat)};"></div>
       <div class="subj-back" data-action="back">← back</div>
       <div class="subj-name">${s.label}</div>
       <div class="subj-tabs">${tabs}</div>
@@ -1009,7 +1020,9 @@ function onOverlayClick(e) {
 
     document.querySelectorAll('.subj-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    document.querySelector('.subj-hdr').style.background = headerBg(subjects[currentSubjId], key);
+    const hdrBg = document.querySelector('.subj-hdr-bg');
+    hdrBg.style.background = headerBg(subjects[currentSubjId], key);
+    hdrBg.style.filter     = headerFilter(subjects[currentSubjId], key);
 
     const grid = document.getElementById('cards-grid');
     grid.style.opacity = '0';
