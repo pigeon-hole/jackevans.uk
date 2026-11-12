@@ -710,9 +710,9 @@ const subjects = {
     bgColor: '#00B84C',
     bgImage: 'images/geography-world-map.jpg',
     bgWash: 'rgba(240,226,192,0.35)',
-    // Photo behind a tab's cards; tabs not listed keep the plain paper background.
+    // Header picture per tab; tabs not listed show the subject's own (the map).
     catBackgrounds: {
-      destruction: { src: 'images/geography-destruction.jpg', position: 'center 40%' }
+      destruction: { src: 'images/geography-destruction.jpg', position: 'center 30%', wash: 'rgba(240,226,192,0.45)' }
     },
     desc: 'Satellite imagery lets us observe change at scales invisible on the ground. These are examples of destruction, creation and natural process, documented from above.',
     categories: ['Destruction', 'Creation', 'Nature'],
@@ -887,11 +887,12 @@ function subjectBg(s) {
   return `linear-gradient(${s.bgWash}, ${s.bgWash}), url(${s.bgImage}) ${s.bgPosition || 'center'} / cover, ${s.bgColor}`;
 }
 
-// A heavy paper wash keeps the text and cards readable over the photo.
-function contentBg(s, cat) {
+// A tab can swap the subject's header picture for its own; others keep the subject's.
+function headerBg(s, cat) {
   const b = s.catBackgrounds && s.catBackgrounds[cat];
-  if (!b) return 'var(--paper)';
-  return `linear-gradient(rgba(242,238,225,0.8), rgba(242,238,225,0.8)), url(${b.src}) ${b.position || 'center'} / cover, var(--paper)`;
+  if (!b) return subjectBg(s);
+  const wash = b.wash || s.bgWash;
+  return `linear-gradient(${wash}, ${wash}), url(${b.src}) ${b.position || 'center'} / cover, ${s.bgColor}`;
 }
 
 function buildSubjectHTML(s, activeCat) {
@@ -902,12 +903,12 @@ function buildSubjectHTML(s, activeCat) {
 
   return `
   <div class="subj-view">
-    <div class="subj-hdr ${s.hdrClass}" style="background:${subjectBg(s)};">
+    <div class="subj-hdr ${s.hdrClass}" style="background:${headerBg(s, activeCat)};">
       <div class="subj-back" data-action="back">← back</div>
       <div class="subj-name">${s.label}</div>
       <div class="subj-tabs">${tabs}</div>
     </div>
-    <div class="subj-content" style="background:${contentBg(s, activeCat)};">
+    <div class="subj-content">
       ${s.desc ? `<p class="subj-desc">${s.desc}</p>` : ''}
       ${activeCat ? `<div class="cat-label">${activeCat}</div>` : ''}
       <div class="cards-grid" id="cards-grid">${buildCards(s, activeCat)}</div>
@@ -992,6 +993,7 @@ function onOverlayClick(e) {
 
     document.querySelectorAll('.subj-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
+    document.querySelector('.subj-hdr').style.background = headerBg(subjects[currentSubjId], key);
 
     const grid = document.getElementById('cards-grid');
     grid.style.opacity = '0';
@@ -1002,7 +1004,6 @@ function onOverlayClick(e) {
 
     setTimeout(() => {
       grid.innerHTML = buildCards(subjects[currentSubjId], key);
-      document.querySelector('.subj-content').style.background = contentBg(subjects[currentSubjId], key);
       grid.style.opacity = '1';
     }, 140);
   }
