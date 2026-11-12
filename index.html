@@ -124,11 +124,6 @@ body {
   text-transform: uppercase;
 }
 
-.box-arrow {
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
 
 /* Colour themes */
 .box--yellow {
@@ -140,8 +135,7 @@ body {
 }
 .box--yellow .box-kicker   { color: rgba(255,255,255,0.6); }
 .box--yellow .box-footer   { border-color: rgba(255,255,255,0.25); }
-.box--yellow .box-cats,
-.box--yellow .box-arrow    { color: rgba(255,255,255,0.65); }
+.box--yellow .box-cats     { color: rgba(255,255,255,0.65); }
 
 .box--red {
   background:
@@ -152,8 +146,7 @@ body {
 }
 .box--red .box-kicker      { color: rgba(255,255,255,0.5); }
 .box--red .box-footer      { border-color: rgba(255,255,255,0.2); }
-.box--red .box-cats,
-.box--red .box-arrow       { color: rgba(255,255,255,0.55); }
+.box--red .box-cats        { color: rgba(255,255,255,0.55); }
 
 .box--blue {
   background:
@@ -164,8 +157,7 @@ body {
 }
 .box--blue .box-kicker     { color: rgba(255,255,255,0.5); }
 .box--blue .box-footer     { border-color: rgba(255,255,255,0.2); }
-.box--blue .box-cats,
-.box--blue .box-arrow      { color: rgba(255,255,255,0.55); }
+.box--blue .box-cats       { color: rgba(255,255,255,0.55); }
 
 /* ---- PAGE FOOTER ---- */
 .page-foot {
@@ -678,8 +670,7 @@ body {
   .mast              { padding: 16px 16px 10px; }
   .subj-box          { padding-left: 16px; padding-right: 16px; }
   .box-kicker        { letter-spacing: 2px; }
-  .box-cats,
-  .box-arrow         { letter-spacing: 1.5px; }
+  .box-cats          { letter-spacing: 1.5px; }
   .page-foot         { padding: 10px 16px; }
   .subj-hdr          { padding: 16px 16px 18px; }
   .subj-tabs         { gap: 8px; }
@@ -836,7 +827,6 @@ function renderHome() {
       </div>
       <div class="box-footer">
         <div class="box-cats">${s.categories.length ? '' : 'coming soon'}</div>
-        <div class="box-arrow">explore →</div>
       </div>
     </div>`;
   }).join('');
