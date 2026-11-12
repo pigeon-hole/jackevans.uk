@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jack Evans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,900;1,700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+<style>
+:root {
+  --paper:  #F2EEE1;
+  --yellow: #FFE000;
+  --ink:    #111111;
+  --muted:  #666;
+  --green:  #00B84C;
+  --red:    #E8001A;
+  --blue:   #0038FF;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow: hidden; height: 100%; }
+
+body {
+  background: #2B2521;
+  font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ---- STAGE ---- */
+#scene {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.magazine {
+  width: 794px;
+  height: 1123px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.page {
+  position: absolute;
+  inset: 0;
+  background: var(--yellow);
+  box-shadow:
+    0 4px 6px rgba(0,0,0,0.15),
+    0 20px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+/* ---- MASTHEAD ---- */
+#home-view {
+  min-height: 100%;
+  background: var(--yellow);
+}
+
+.mast {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 20px 36px 12px;
+  background: var(--yellow);
+}
+
+.mast-name {
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: 1.5px;
+  text-transform: lowercase;
+  color: var(--ink);
+}
+
+.mast-meta {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mast-rule {
+  border: none;
+  border-top: 2px solid var(--ink);
+  margin: 0;
+}
+
+/* ---- HOME: SUBJECT BOXES ---- */
+.subj-box {
+  width: 100%;
+  padding: 28px 36px 24px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: filter 0.15s;
+}
+.subj-box:hover { filter: brightness(0.96); }
+.subj-box + .subj-box { border-top: 4px solid var(--yellow); }
+
+.box-kicker {
+  font-size: 8.5px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.box-title {
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  font-size: 108px;
+  line-height: 0.88;
+  letter-spacing: -2px;
+  text-transform: uppercase;
+  flex-grow: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.box-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid;
+}
+
+.box-cats {
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.box-arrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Colour themes */
+.box--yellow {
+  background: var(--green);
+  color: white;
+}
+.box--yellow .box-kicker   { color: rgba(255,255,255,0.6); }
+.box--yellow .box-footer   { border-color: rgba(255,255,255,0.25); }
+.box--yellow .box-cats,
+.box--yellow .box-arrow    { color: rgba(255,255,255,0.65); }
+
+.box--red {
+  background: var(--red);
+  color: white;
+}
+.box--red .box-kicker      { color: rgba(255,255,255,0.5); }
+.box--red .box-footer      { border-color: rgba(255,255,255,0.2); }
+.box--red .box-cats,
+.box--red .box-arrow       { color: rgba(255,255,255,0.55); }
+
+.box--blue {
+  background: var(--blue);
+  color: white;
+}
+.box--blue .box-kicker     { color: rgba(255,255,255,0.5); }
+.box--blue .box-footer     { border-color: rgba(255,255,255,0.2); }
+.box--blue .box-cats,
+.box--blue .box-arrow      { color: rgba(255,255,255,0.55); }
+
+/* ---- PAGE FOOTER ---- */
+.page-foot {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(17,17,17,0.5);
+  background: var(--yellow);
+  padding: 10px 36px;
+}
+
+/* ---- SUBJECT OVERLAY ---- */
+#subj-overlay {
+  position: absolute;
+  display: none;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.subj-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.subj-view.visible { opacity: 1; }
+
+/* Subject header (coloured area) */
+.subj-hdr {
+  flex-shrink: 0;
+  padding: 18px 36px 20px;
+}
+
+.subj-back {
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.subj-back:hover { opacity: 1; }
+
+.subj-name {
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  font-size: 56px;
+  line-height: 0.9;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.subj-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.subj-tab {
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.15s;
+  font-family: 'Barlow', Arial, sans-serif;
+}
+
+/* Yellow header */
+.hdr--yellow .subj-back { color: var(--ink); }
+.hdr--yellow .subj-name { color: var(--ink); }
+.hdr--yellow .subj-tab  { border-color: rgba(17,17,17,0.25); color: rgba(17,17,17,0.5); }
+.hdr--yellow .subj-tab.active { background: var(--ink); border-color: var(--ink); color: white; }
+.hdr--yellow .subj-tab:hover:not(.active) { border-color: rgba(17,17,17,0.6); color: var(--ink); }
+
+/* Red header */
+.hdr--red .subj-back { color: white; }
+.hdr--red .subj-name { color: white; }
+.hdr--red .subj-tab  { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.6); }
+.hdr--red .subj-tab.active { background: white; border-color: white; color: var(--ink); }
+.hdr--red .subj-tab:hover:not(.active) { border-color: white; color: white; }
+
+.hdr--blue .subj-back { color: white; }
+.hdr--blue .subj-name { color: white; }
+
+/* Subject content (paper area) */
+.subj-content {
+  flex: 1;
+  background: var(--paper);
+  overflow-y: auto;
+  padding: 24px 36px 72px;
+}
+
+.subj-desc {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5px;
+  line-height: 1.72;
+  color: #2a2a2a;
+  max-width: 560px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(17,17,17,0.12);
+}
+
+/* Category section heading */
+.cat-label {
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+/* ---- EXAMPLE CARDS ---- */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  transition: opacity 0.15s;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-img {
+  background: #CBC6B5;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #AAA494;
+  margin-bottom: 8px;
+  text-align: center;
+  padding: 8px;
+  line-height: 1.4;
+}
+
+.card-title {
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.1;
+  margin-bottom: 5px;
+}
+
+.card-desc {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 10px;
+  line-height: 1.6;
+  color: #3a3a3a;
+  flex-grow: 1;
+}
+
+.card-coords {
+  font-size: 7.5px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-family: 'Barlow', Arial, sans-serif;
+}
+
+.coming-soon {
+  grid-column: 1 / -1;
+  min-height: 620px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  font-size: 48px;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  color: rgba(17,17,17,0.18);
+}
+
+.card--open { cursor: pointer; }
+.card--open .card-img { position: relative; transition: filter 0.15s; }
+.card--open:hover .card-img { filter: brightness(0.93); }
+.card--open:hover .card-title { text-decoration: underline; }
+
+.card-img--thumb {
+  padding: 0;
+  align-items: stretch;
+  gap: 2px;
+  background: white;
+}
+.thumb-half {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+}
+.thumb-half img {
+  position: absolute;
+  width: 256px; height: 256px;
+  max-width: none;
+}
+.thumb-half--photo img {
+  position: static;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-open-tag {
+  position: absolute;
+  left: 0; bottom: 0;
+  background: var(--ink);
+  color: white;
+  font-size: 7.5px;
+  letter-spacing: 1.5px;
+  padding: 4px 7px;
+}
+
+/* ---- BEFORE / AFTER POP-UP ---- */
+#cmp-pop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17,17,17,0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#cmp-pop.open { opacity: 1; pointer-events: auto; }
+
+.cmp-panel {
+  width: 722px;
+  background: var(--paper);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transform: translateY(14px);
+  transition: transform 0.25s ease;
+}
+#cmp-pop.open .cmp-panel { transform: none; }
+
+.cmp-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+}
+.cmp-head.hdr--yellow { color: var(--ink); }
+.cmp-head.hdr--red    { color: white; }
+.cmp-head.hdr--blue   { color: white; }
+
+.cmp-kicker {
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
+.cmp-title {
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 0.9;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+}
+
+.cmp-close {
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.cmp-close:hover { opacity: 1; }
+
+.cmp-stage {
+  --pos: 50%;
+  position: relative;
+  height: 500px;
+  overflow: hidden;
+  background: var(--ink);
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  outline: none;
+}
+
+.cmp-layer { position: absolute; inset: 0; }
+.cmp-layer--before { clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
+.cmp-layer img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.cmp-ph { position: relative; width: 100%; height: 100%; }
+.cmp-ph--before {
+  background-color: #AEB89A;
+  background-image:
+    linear-gradient(rgba(17,17,17,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17,17,17,0.12) 1px, transparent 1px);
+  background-size: 38px 38px;
+}
+.cmp-ph--after {
+  background-color: #9C948A;
+  background-image: repeating-linear-gradient(45deg, rgba(17,17,17,0.1) 0 2px, transparent 2px 14px);
+}
+.cmp-ph span {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 8.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(17,17,17,0.55);
+}
+.cmp-ph span:first-child { left: 25%; }
+.cmp-ph span:last-child  { left: 75%; }
+
+.cmp-tag {
+  position: absolute;
+  top: 12px;
+  background: var(--ink);
+  color: white;
+  font-size: 8.5px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 5px 9px;
+}
+.cmp-tag--before { left: 12px; }
+.cmp-tag--after  { right: 12px; }
+
+.cmp-bar {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: var(--pos);
+  width: 2px;
+  margin-left: -1px;
+  background: white;
+}
+
+.cmp-knob {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px; height: 38px;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.cmp-bar { outline: none; }
+.cmp-bar:focus-visible .cmp-knob { outline: 2px solid white; outline-offset: 2px; }
+
+/* Zoomable map version */
+.cmp-stage--map { cursor: default; }
+.cmp-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--ink);
+  font-family: 'Barlow', Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.6);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.cmp-stage--map .cmp-tag { z-index: 2; pointer-events: none; }
+.cmp-stage--map .cmp-bar { z-index: 2; cursor: ew-resize; touch-action: none; }
+.cmp-stage--map .cmp-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -14px; right: -14px;
+}
+.cmp-map .leaflet-bar { border: 2px solid var(--ink); border-radius: 0; box-shadow: none; }
+.cmp-map .leaflet-bar a { border-radius: 0; color: var(--ink); }
+.cmp-map .leaflet-control-attribution {
+  font-size: 8px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cmp-foot { padding: 14px 20px 16px; }
+
+.cmp-desc {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5px;
+  line-height: 1.72;
+  color: #2a2a2a;
+  margin-bottom: 8px;
+}
+
+.cmp-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 7.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+
+<div id="scene">
+  <div class="magazine" id="mag">
+    <div class="page" id="page">
+
+      <!-- Home view -->
+      <div id="home-view">
+        <div class="mast">
+          <span class="mast-name">jack evans</span>
+          <span class="mast-meta">jackevans.uk</span>
+        </div>
+        <hr class="mast-rule">
+        <div id="subj-boxes"></div>
+      </div>
+
+      <!-- Subject overlay (hidden until a box is clicked) -->
+      <div id="subj-overlay"></div>
+
+      <div id="cmp-pop"></div>
+
+      <div class="page-foot">
+        <span>jackevans.uk</span>
+        <span>nov 2026</span>
+        <span>01</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+
+const subjects = {
+  geography: {
+    id: 'geography',
+    label: 'Geography',
+    kicker: 'Nothing ever changes.',
+    colorClass: 'box--yellow',
+    hdrClass: 'hdr--yellow',
+    bgColor: '#00B84C',
+    desc: 'Satellite imagery lets us observe change at scales invisible on the ground. These are examples of destruction, creation and natural process, documented from above.',
+    categories: ['Destruction', 'Creation', 'Nature'],
+    defaultCat: 'destruction',
+    examples: {
+      destruction: [
+        { title: 'Rafah, Gaza',         desc: 'Near-total destruction of a dense urban area following military operations, 2023–24.',    coords: '31.3° N, 34.3° E',
+          // release = Esri World Imagery Wayback release number; labels are the imagery capture dates at the map centre.
+          compare: {
+            map:    { center: [31.2874, 34.2520], zoom: 16 },
+            before: { label: 'Before · May 2022', release: 45134 },
+            after:  { label: 'After · Jan 2025',  release: 43291 }
+          } },
+        { title: 'Marinka, Ukraine',    desc: 'Frontline town west of Donetsk, fought over from 2014 and reduced to ruins by the end of 2023.', coords: '47.9° N, 37.5° E',
+          compare: {
+            // bounds keep the view on the town; the 2021 imagery stops at zoom 17.
+            map:    { center: [47.9421, 37.5034], zoom: 16, minZoom: 14, maxZoom: 17,
+                      bounds: [[47.920, 37.465], [47.965, 37.545]] },
+            before: { label: 'Before · Oct 2021', release: 48232 },
+            after:  { label: 'After · Sep 2024',  release: 43291 }
+          } },
+      ],
+      creation: [
+        { title: 'Milton Keynes, UK',    desc: 'New town planned and built on agricultural land from 1967, following a strict grid.',    coords: '52.0° N, 0.7° W',
+          // Static screenshots: both are the same view, so cropping them identically keeps them aligned.
+          compare: {
+            height: 380,
+            focus:  '46% 45%',
+            credit: 'Imagery: Google Earth',
+            before: { label: 'Before · 1945', src: 'images/milton-keynes-1945.webp' },
+            after:  { label: 'After · today', src: 'images/milton-keynes-today.webp' }
+          } },
+        { title: 'Palm Jumeirah, Dubai', desc: 'Artificial archipelago constructed from 94 million cubic metres of reclaimed sea.',       coords: '25.1° N, 55.1° E',
+          // Release 10 at zoom 13 and below predates the Palm (no Palm or World islands visible,
+          // despite Esri's metadata saying 2010); from zoom 14 it switches to 2011 imagery with the Palm built.
+          compare: {
+            // The after imagery is Nov 2025 only at zoom 12+; wider levels use an undated Earthstar mosaic.
+            map:    { center: [25.124, 55.120], zoom: 11, minZoom: 9, maxZoom: 13 },
+            before: { label: 'Before · pre-2001', release: 10 },
+            after:  { label: 'After · 2020s', release: 43291 }
+          } },
+      ],
+      nature: []
+    }
+  },
+  technology: {
+    id: 'technology',
+    label: 'Technology',
+    kicker: 'a system is what it does',
+    colorClass: 'box--red',
+    hdrClass: 'hdr--red',
+    bgColor: '#E8001A',
+    desc: 'The physical infrastructure of technology — data centres, energy farms, industrial scale — is rarely seen. These are the facilities that underpin the digital world.',
+    categories: [],
+    defaultCat: null,
+    examples: {}
+  }
+};
+
+subjects.culture = {
+  id: 'culture',
+  label: 'Culture',
+  kicker: '',
+  colorClass: 'box--blue',
+  hdrClass: 'hdr--blue',
+  bgColor: '#0038FF',
+  desc: '',
+  categories: [],
+  defaultCat: null,
+  examples: {}
+};
+
+const subjectOrder = ['geography', 'technology', 'culture'];
+const boxHeights   = { geography: 340, technology: 340, culture: 340 };
+
+/* ===================== HOME VIEW ===================== */
+
+function renderHome() {
+  const container = document.getElementById('subj-boxes');
+  container.innerHTML = subjectOrder.map(id => {
+    const s = subjects[id];
+    return `
+    <div class="subj-box ${s.colorClass}" data-subject="${id}" style="height:${boxHeights[id]}px;">
+      <div>
+        <div class="box-kicker">${s.kicker}</div>
+        <div class="box-title">${s.label}</div>
+      </div>
+      <div class="box-footer">
+        <div class="box-cats">${s.categories.length ? s.categories.join(' · ') : 'coming soon'}</div>
+        <div class="box-arrow">explore →</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.subj-box').forEach(box => {
+    box.addEventListener('click', () => openSubject(box.dataset.subject, box));
+  });
+}
+
+/* ===================== SUBJECT VIEW ===================== */
+
+let currentCat     = null;
+let currentSubjId  = null;
+let savedPos       = null;
+
+function openSubject(subjId, boxEl) {
+  currentSubjId = subjId;
+  const s = subjects[subjId];
+  currentCat = s.defaultCat;
+
+  savedPos = getBoxPos(boxEl);
+
+  const overlay = document.getElementById('subj-overlay');
+  overlay.style.cssText = `
+    display: block;
+    position: absolute;
+    top: ${savedPos.top}px;
+    left: ${savedPos.left}px;
+    width: ${savedPos.width}px;
+    height: ${savedPos.height}px;
+    background: ${s.bgColor};
+    overflow: hidden;
+    z-index: 20;
+    transition: none;
+  `;
+
+  overlay.innerHTML = buildSubjectHTML(s, currentCat);
+  overlay.getBoundingClientRect(); // force reflow
+
+  overlay.style.transition = 'top 0.45s cubic-bezier(0.4,0,0.2,1), left 0.45s cubic-bezier(0.4,0,0.2,1), width 0.45s cubic-bezier(0.4,0,0.2,1), height 0.45s cubic-bezier(0.4,0,0.2,1)';
+  overlay.style.top    = '0';
+  overlay.style.left   = '0';
+  overlay.style.width  = '794px';
+  overlay.style.height = '1123px';
+
+  setTimeout(() => {
+    const view = overlay.querySelector('.subj-view');
+    if (view) view.classList.add('visible');
+  }, 400);
+
+  overlay.addEventListener('click', onOverlayClick);
+}
+
+function buildSubjectHTML(s, activeCat) {
+  const tabs = s.categories.map(cat => {
+    const key = cat.toLowerCase();
+    return `<div class="subj-tab ${key === activeCat ? 'active' : ''}" data-cat="${key}">${cat}</div>`;
+  }).join('');
+
+  return `
+  <div class="subj-view">
+    <div class="subj-hdr ${s.hdrClass}" style="background:${s.bgColor};">
+      <div class="subj-back" data-action="back">← back</div>
+      <div class="subj-name">${s.label}</div>
+      <div class="subj-tabs">${tabs}</div>
+    </div>
+    <div class="subj-content">
+      ${s.desc ? `<p class="subj-desc">${s.desc}</p>` : ''}
+      ${activeCat ? `<div class="cat-label">${activeCat}</div>` : ''}
+      <div class="cards-grid" id="cards-grid">${buildCards(s, activeCat)}</div>
+    </div>
+  </div>`;
+}
+
+// Static satellite tiles for one half of a card thumbnail, centred on the map's start point.
+function buildThumbHalf(map, release) {
+  const zoom  = map.zoom - 1;
+  const world = 256 * 2 ** zoom;
+  const px = (map.center[1] + 180) / 360 * world;
+  const py = (1 - Math.asinh(Math.tan(map.center[0] * Math.PI / 180)) / Math.PI) / 2 * world;
+  const reach = 64;
+
+  let tiles = '';
+  for (let tx = Math.floor((px - reach) / 256); tx * 256 < px + reach; tx++) {
+    for (let ty = Math.floor((py - reach) / 256); ty * 256 < py + reach; ty++) {
+      const src = WAYBACK_TILES.replace('{release}', release).replace('{z}', zoom).replace('{y}', ty).replace('{x}', tx);
+      tiles += `<img src="${src}" alt="" draggable="false" style="left:calc(50% + ${tx * 256 - px}px); top:calc(50% + ${ty * 256 - py}px);">`;
+    }
+  }
+  return `<div class="thumb-half">${tiles}</div>`;
+}
+
+function buildCardImage(ex) {
+  const tag = ex.compare ? '<div class="card-open-tag">before / after →</div>' : '';
+  if (ex.compare && ex.compare.map) {
+    const c = ex.compare;
+    return `<div class="card-img card-img--thumb">${buildThumbHalf(c.map, c.before.release)}${buildThumbHalf(c.map, c.after.release)}${tag}</div>`;
+  }
+  if (ex.compare && ex.compare.before.src) {
+    const c = ex.compare;
+    const half = img => `<div class="thumb-half thumb-half--photo"><img src="${img.src}" alt="" draggable="false" style="object-position:${c.focus || '50% 50%'};"></div>`;
+    return `<div class="card-img card-img--thumb">${half(c.before)}${half(c.after)}${tag}</div>`;
+  }
+  return `<div class="card-img">[ ${ex.title} ]${tag}</div>`;
+}
+
+function buildCards(s, catKey) {
+  const examples = s.examples[catKey] || [];
+  if (!examples.length) return '<div class="coming-soon">Coming Soon</div>';
+  return examples.map((ex, i) => `
+  <div class="card ${ex.compare ? 'card--open' : ''}" data-idx="${i}">
+    ${buildCardImage(ex)}
+    <div class="card-title">${ex.title}</div>
+    <div class="card-desc">${ex.desc}</div>
+    <div class="card-coords">${ex.coords}</div>
+  </div>`).join('');
+}
+
+function onOverlayClick(e) {
+  const back = e.target.closest('[data-action="back"]');
+  const tab  = e.target.closest('.subj-tab');
+
+  if (back) { closeSubject(); return; }
+
+  const card = e.target.closest('.card--open');
+  if (card) {
+    openCompare(subjects[currentSubjId].examples[currentCat][card.dataset.idx]);
+    return;
+  }
+
+  if (tab) {
+    const key = tab.dataset.cat;
+    if (key === currentCat) return;
+    currentCat = key;
+
+    document.querySelectorAll('.subj-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    const grid = document.getElementById('cards-grid');
+    grid.style.opacity = '0';
+
+    // update cat label
+    const label = document.querySelector('.cat-label');
+    if (label) label.textContent = key;
+
+    setTimeout(() => {
+      grid.innerHTML = buildCards(subjects[currentSubjId], key);
+      grid.style.opacity = '1';
+    }, 140);
+  }
+}
+
+function closeSubject() {
+  if (!savedPos) return;
+
+  const overlay = document.getElementById('subj-overlay');
+  const view    = overlay.querySelector('.subj-view');
+  if (view) view.classList.remove('visible');
+
+  setTimeout(() => {
+    overlay.style.transition = 'top 0.42s cubic-bezier(0.4,0,0.2,1), left 0.42s cubic-bezier(0.4,0,0.2,1), width 0.42s cubic-bezier(0.4,0,0.2,1), height 0.42s cubic-bezier(0.4,0,0.2,1)';
+    overlay.style.top    = savedPos.top + 'px';
+    overlay.style.left   = savedPos.left + 'px';
+    overlay.style.width  = savedPos.width + 'px';
+    overlay.style.height = savedPos.height + 'px';
+
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      overlay.removeEventListener('click', onOverlayClick);
+      savedPos      = null;
+      currentSubjId = null;
+      currentCat    = null;
+    }, 440);
+  }, 180);
+}
+
+/* ===================== BEFORE / AFTER POP-UP ===================== */
+
+function buildCompareLayer(side, img, focus) {
+  const inner = img.src
+    ? `<img src="${img.src}" alt="${img.label}" draggable="false" style="object-position:${focus || '50% 50%'};">`
+    : `<div class="cmp-ph cmp-ph--${side}"><span>[ ${side} image ]</span><span>[ ${side} image ]</span></div>`;
+  return `<div class="cmp-layer cmp-layer--${side}">${inner}<div class="cmp-tag cmp-tag--${side}">${img.label}</div></div>`;
+}
+
+const WAYBACK_TILES = 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{release}/{z}/{y}/{x}';
+
+let cmpMap = null;
+
+function destroyCompareMap() {
+  if (cmpMap) { cmpMap.remove(); cmpMap = null; }
+}
+
+// Returns a function that moves the before/after divider to a given percentage.
+function initCompareMap(c) {
+  const el = document.getElementById('cmp-map');
+  if (!window.L) {
+    el.textContent = 'Map could not load — check your connection';
+    return null;
+  }
+
+  const map = L.map(el, {
+    center: c.map.center,
+    zoom: c.map.zoom,
+    minZoom: c.map.minZoom ?? 11,
+    maxZoom: c.map.maxZoom ?? 18,
+    maxBounds: c.map.bounds,
+    maxBoundsViscosity: 1,
+    zoomControl: false,
+    attributionControl: false
+  });
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  L.control.attribution({ position: 'bottomright', prefix: false }).addTo(map);
+
+  const pane = map.createPane('before');
+  pane.style.zIndex = 250;
+
+  const attribution = 'Imagery © Esri, Maxar, Vantor · World Imagery Wayback';
+  L.tileLayer(WAYBACK_TILES, { release: c.after.release, maxZoom: 18, attribution }).addTo(map);
+  L.tileLayer(WAYBACK_TILES, { release: c.before.release, maxZoom: 18, pane: 'before' }).addTo(map);
+
+  let pct = 50;
+  const clip = () => {
+    const size = map.getSize();
+    const a = map.containerPointToLayerPoint([0, 0]);
+    const b = map.containerPointToLayerPoint([size.x * pct / 100, size.y]);
+    pane.style.clipPath = `polygon(${a.x}px ${a.y}px, ${b.x}px ${a.y}px, ${b.x}px ${b.y}px, ${a.x}px ${b.y}px)`;
+  };
+  map.on('move zoomend viewreset resize', clip);
+  clip();
+
+  cmpMap = map;
+  return p => { pct = p; clip(); };
+}
+
+function openCompare(ex) {
+  const s   = subjects[currentSubjId];
+  const c   = ex.compare;
+  const pop = document.getElementById('cmp-pop');
+
+  destroyCompareMap();
+
+  const layers = c.map
+    ? `<div class="cmp-map" id="cmp-map"></div>
+       <div class="cmp-tag cmp-tag--before">${c.before.label}</div>
+       <div class="cmp-tag cmp-tag--after">${c.after.label}</div>`
+    : buildCompareLayer('after', c.after, c.focus) + buildCompareLayer('before', c.before, c.focus);
+
+  pop.innerHTML = `
+  <div class="cmp-panel">
+    <div class="cmp-head ${s.hdrClass}" style="background:${s.bgColor};">
+      <div>
+        <div class="cmp-kicker">${s.label} · ${currentCat}</div>
+        <div class="cmp-title">${ex.title}</div>
+      </div>
+      <div class="cmp-close" data-action="cmp-close">close ×</div>
+    </div>
+    <div class="cmp-stage ${c.map ? 'cmp-stage--map' : ''}" id="cmp-stage" ${c.height ? `style="height:${c.height}px;"` : ''}>
+      ${layers}
+      <div class="cmp-bar" tabindex="0" role="slider" aria-label="Before and after divider"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><div class="cmp-knob">◂ ▸</div></div>
+    </div>
+    <div class="cmp-foot">
+      <p class="cmp-desc">${ex.desc}</p>
+      <div class="cmp-meta"><span>${ex.coords}${c.credit ? ' · ' + c.credit : ''}</span><span>${c.map ? 'drag the bar to compare · scroll to zoom · drag the map to move' : 'drag the bar to compare'}</span></div>
+    </div>
+  </div>`;
+
+  const stage = document.getElementById('cmp-stage');
+  const bar   = stage.querySelector('.cmp-bar');
+  if (c.map) initCompareBar(stage, bar, initCompareMap(c));
+  else       initCompareBar(stage, stage, null);
+
+  pop.classList.add('open');
+}
+
+function closeCompare() {
+  const pop = document.getElementById('cmp-pop');
+  pop.classList.remove('open');
+  setTimeout(() => { if (!pop.classList.contains('open')) destroyCompareMap(); }, 250);
+}
+
+// grabEl is what the pointer drags: the whole stage for static images, only the bar over a map.
+function initCompareBar(stage, grabEl, onChange) {
+  const bar = stage.querySelector('.cmp-bar');
+  const setPos = pct => {
+    pct = Math.max(0, Math.min(100, pct));
+    stage.style.setProperty('--pos', pct + '%');
+    bar.setAttribute('aria-valuenow', Math.round(pct));
+    if (onChange) onChange(pct);
+  };
+  const setFromPointer = e => {
+    const r = stage.getBoundingClientRect();
+    setPos((e.clientX - r.left) / r.width * 100);
+  };
+
+  grabEl.addEventListener('pointerdown', e => {
+    grabEl.setPointerCapture(e.pointerId);
+    bar.focus({ preventScroll: true });
+    setFromPointer(e);
+    e.preventDefault();
+  });
+  grabEl.addEventListener('pointermove', e => {
+    if (grabEl.hasPointerCapture(e.pointerId)) setFromPointer(e);
+  });
+  bar.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const cur = parseFloat(stage.style.getPropertyValue('--pos')) || 50;
+    setPos(cur + (e.key === 'ArrowLeft' ? -5 : 5));
+  });
+}
+
+/* ===================== HELPERS ===================== */
+
+function getBoxPos(boxEl) {
+  const page    = document.getElementById('page');
+  const pageR   = page.getBoundingClientRect();
+  const boxR    = boxEl.getBoundingClientRect();
+  const scale   = document.getElementById('mag').getBoundingClientRect().width / 794;
+
+  return {
+    top:    (boxR.top  - pageR.top)  / scale,
+    left:   (boxR.left - pageR.left) / scale,
+    width:  boxR.width  / scale,
+    height: boxR.height / scale
+  };
+}
+
+function scaleScene() {
+  const m = document.getElementById('mag');
+  const s = Math.min((innerWidth - 40) / 794, (innerHeight - 40) / 1123, 1);
+  m.style.transform       = `scale(${s})`;
+  m.style.transformOrigin = 'center center';
+}
+
+/* ===================== INIT ===================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+  scaleScene();
+  window.addEventListener('resize', scaleScene);
+  renderHome();
+
+  const pop = document.getElementById('cmp-pop');
+  pop.addEventListener('click', e => {
+    if (e.target === pop || e.target.closest('[data-action="cmp-close"]')) closeCompare();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (pop.classList.contains('open')) closeCompare();
+    else if (currentSubjId) closeSubject();
+  });
+});
+</script>
+</body>
+</html>
