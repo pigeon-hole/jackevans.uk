@@ -727,7 +727,7 @@ const subjects = {
   geography: {
     id: 'geography',
     label: 'Geography',
-    kicker: 'Nothing ever changes.',
+    kicker: '',
     colorClass: 'box--yellow',
     hdrClass: 'hdr--yellow',
     bgColor: '#00B84C',
@@ -791,7 +791,7 @@ const subjects = {
   technology: {
     id: 'technology',
     label: 'Technology',
-    kicker: 'a system is what it does',
+    kicker: '',
     colorClass: 'box--red',
     hdrClass: 'hdr--red',
     bgColor: '#E8001A',
@@ -826,11 +826,11 @@ function renderHome() {
     return `
     <div class="subj-box ${s.colorClass}" data-subject="${id}">
       <div>
-        <div class="box-kicker">${s.kicker}</div>
+        ${s.kicker ? `<div class="box-kicker">${s.kicker}</div>` : ''}
         <div class="box-title">${s.label}</div>
       </div>
       <div class="box-footer">
-        <div class="box-cats">${s.categories.length ? s.categories.join(' · ') : 'coming soon'}</div>
+        <div class="box-cats">${s.categories.length ? '' : 'coming soon'}</div>
         <div class="box-arrow">explore →</div>
       </div>
     </div>`;
