@@ -179,10 +179,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  opacity: 0;
-  transition: opacity 0.25s ease;
 }
-.subj-view.visible { opacity: 1; }
 
 /* Subject header (coloured area) */
 .subj-hdr {
@@ -832,44 +829,53 @@ function renderHome() {
 
 let currentCat     = null;
 let currentSubjId  = null;
-let savedPos       = null;
+let isSubjectOpen  = false;
+let overlayAnims   = [];
+
+const OPEN_MS  = 560;
+const CLOSE_MS = 440;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+// The overlay is laid out at full size once; only its clip window animates, so no
+// layout or background re-cropping happens per frame.
+function clipToBox(boxEl) {
+  const page = document.getElementById('page').getBoundingClientRect();
+  const r = getBoxPos(boxEl);
+  return `inset(${r.top}px ${page.width - r.left - r.width}px ${page.height - r.top - r.height}px ${r.left}px)`;
+}
+const CLIP_FULL = 'inset(0px 0px 0px 0px)';
+
+function stopOverlayAnims() {
+  overlayAnims.forEach(a => a.cancel());
+  overlayAnims = [];
+}
 
 function openSubject(subjId, boxEl) {
   currentSubjId = subjId;
+  isSubjectOpen = true;
   const s = subjects[subjId];
   currentCat = s.defaultCat;
 
-  savedPos = getBoxPos(boxEl);
-
+  stopOverlayAnims();
   const overlay = document.getElementById('subj-overlay');
-  overlay.style.cssText = `
-    display: block;
-    position: absolute;
-    top: ${savedPos.top}px;
-    left: ${savedPos.left}px;
-    width: ${savedPos.width}px;
-    height: ${savedPos.height}px;
-    background: ${subjectBg(s)};
-    overflow: hidden;
-    z-index: 20;
-    transition: none;
-  `;
-
+  overlay.style.cssText = `display: block; inset: 0; background: ${subjectBg(s)};`;
   overlay.innerHTML = buildSubjectHTML(s, currentCat);
-  overlay.getBoundingClientRect(); // force reflow
-
-  overlay.style.transition = 'top 0.45s cubic-bezier(0.4,0,0.2,1), left 0.45s cubic-bezier(0.4,0,0.2,1), width 0.45s cubic-bezier(0.4,0,0.2,1), height 0.45s cubic-bezier(0.4,0,0.2,1)';
-  overlay.style.top    = '0';
-  overlay.style.left   = '0';
-  overlay.style.width  = '100%';
-  overlay.style.height = '100%';
-
-  setTimeout(() => {
-    const view = overlay.querySelector('.subj-view');
-    if (view) view.classList.add('visible');
-  }, 400);
-
   overlay.addEventListener('click', onOverlayClick);
+
+  const duration = reduceMotion.matches ? 0 : OPEN_MS;
+  const easing   = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  overlayAnims = [
+    overlay.animate([
+      { clipPath: clipToBox(boxEl), opacity: 0 },
+      { opacity: 1, offset: 0.2 },
+      { clipPath: CLIP_FULL, opacity: 1 }
+    ], { duration, easing }),
+    overlay.querySelector('.subj-view').animate([
+      { opacity: 0 },
+      { opacity: 0, offset: 0.3 },
+      { opacity: 1 }
+    ], { duration, easing: 'ease-out' })
+  ];
 }
 
 // The wash keeps header text legible over the picture: light under dark text, dark under white.
@@ -992,27 +998,36 @@ function onOverlayClick(e) {
 }
 
 function closeSubject() {
-  if (!savedPos) return;
+  if (!isSubjectOpen) return;
+  isSubjectOpen = false;
 
   const overlay = document.getElementById('subj-overlay');
-  const view    = overlay.querySelector('.subj-view');
-  if (view) view.classList.remove('visible');
+  const boxEl   = document.querySelector(`.subj-box[data-subject="${currentSubjId}"]`);
+  overlay.removeEventListener('click', onOverlayClick);
+  overlay.style.pointerEvents = 'none';
 
-  setTimeout(() => {
-    overlay.style.transition = 'top 0.42s cubic-bezier(0.4,0,0.2,1), left 0.42s cubic-bezier(0.4,0,0.2,1), width 0.42s cubic-bezier(0.4,0,0.2,1), height 0.42s cubic-bezier(0.4,0,0.2,1)';
-    overlay.style.top    = savedPos.top + 'px';
-    overlay.style.left   = savedPos.left + 'px';
-    overlay.style.width  = savedPos.width + 'px';
-    overlay.style.height = savedPos.height + 'px';
+  stopOverlayAnims();
+  const duration = reduceMotion.matches ? 0 : CLOSE_MS;
+  const shrink = overlay.animate([
+    { clipPath: CLIP_FULL, opacity: 1 },
+    { opacity: 1, offset: 0.7 },
+    { clipPath: clipToBox(boxEl), opacity: 0 }
+  ], { duration, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+  overlayAnims = [
+    shrink,
+    overlay.querySelector('.subj-view').animate([
+      { opacity: 1 },
+      { opacity: 0, offset: 0.4 },
+      { opacity: 0 }
+    ], { duration, fill: 'forwards' })
+  ];
 
-    setTimeout(() => {
-      overlay.style.display = 'none';
-      overlay.removeEventListener('click', onOverlayClick);
-      savedPos      = null;
-      currentSubjId = null;
-      currentCat    = null;
-    }, 440);
-  }, 180);
+  shrink.onfinish = () => {
+    stopOverlayAnims();
+    overlay.style.display = 'none';
+    currentSubjId = null;
+    currentCat    = null;
+  };
 }
 
 /* ===================== BEFORE / AFTER POP-UP ===================== */
