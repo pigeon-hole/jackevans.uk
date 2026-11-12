@@ -132,7 +132,10 @@ body {
 
 /* Colour themes */
 .box--yellow {
-  background: var(--green);
+  background:
+    linear-gradient(rgba(35,22,8,0.45), rgba(35,22,8,0.45)),
+    url(images/geography-map.jpg) center / cover,
+    var(--green);
   color: white;
 }
 .box--yellow .box-kicker   { color: rgba(255,255,255,0.6); }
@@ -240,7 +243,7 @@ body {
 /* Yellow header */
 .hdr--yellow .subj-back { color: var(--ink); }
 .hdr--yellow .subj-name { color: var(--ink); }
-.hdr--yellow .subj-tab  { border-color: rgba(17,17,17,0.25); color: rgba(17,17,17,0.5); }
+.hdr--yellow .subj-tab  { border-color: rgba(17,17,17,0.35); color: rgba(17,17,17,0.7); background: rgba(242,238,225,0.8); }
 .hdr--yellow .subj-tab.active { background: var(--ink); border-color: var(--ink); color: white; }
 .hdr--yellow .subj-tab:hover:not(.active) { border-color: rgba(17,17,17,0.6); color: var(--ink); }
 
@@ -720,6 +723,7 @@ const subjects = {
     colorClass: 'box--yellow',
     hdrClass: 'hdr--yellow',
     bgColor: '#00B84C',
+    bgImage: 'images/geography-map.jpg',
     desc: 'Satellite imagery lets us observe change at scales invisible on the ground. These are examples of destruction, creation and natural process, documented from above.',
     categories: ['Destruction', 'Creation', 'Nature'],
     defaultCat: 'destruction',
@@ -851,7 +855,7 @@ function openSubject(subjId, boxEl) {
     left: ${savedPos.left}px;
     width: ${savedPos.width}px;
     height: ${savedPos.height}px;
-    background: ${s.bgColor};
+    background: ${subjectBg(s)};
     overflow: hidden;
     z-index: 20;
     transition: none;
@@ -874,6 +878,12 @@ function openSubject(subjId, boxEl) {
   overlay.addEventListener('click', onOverlayClick);
 }
 
+// Headers sit dark text on the picture, so a light parchment wash keeps it legible.
+function subjectBg(s) {
+  if (!s.bgImage) return s.bgColor;
+  return `linear-gradient(rgba(240,226,192,0.35), rgba(240,226,192,0.35)), url(${s.bgImage}) center / cover, ${s.bgColor}`;
+}
+
 function buildSubjectHTML(s, activeCat) {
   const tabs = s.categories.map(cat => {
     const key = cat.toLowerCase();
@@ -882,7 +892,7 @@ function buildSubjectHTML(s, activeCat) {
 
   return `
   <div class="subj-view">
-    <div class="subj-hdr ${s.hdrClass}" style="background:${s.bgColor};">
+    <div class="subj-hdr ${s.hdrClass}" style="background:${subjectBg(s)};">
       <div class="subj-back" data-action="back">← back</div>
       <div class="subj-name">${s.label}</div>
       <div class="subj-tabs">${tabs}</div>
@@ -1085,7 +1095,7 @@ function openCompare(ex) {
 
   pop.innerHTML = `
   <div class="cmp-panel">
-    <div class="cmp-head ${s.hdrClass}" style="background:${s.bgColor};">
+    <div class="cmp-head ${s.hdrClass}" style="background:${subjectBg(s)};">
       <div>
         <div class="cmp-kicker">${s.label} · ${currentCat}</div>
         <div class="cmp-title">${ex.title}</div>
@@ -1130,7 +1140,7 @@ function openCollection(col) {
 
   pop.innerHTML = `
   <div class="cmp-panel cmp-panel--collection">
-    <div class="cmp-head ${s.hdrClass}" style="background:${s.bgColor};">
+    <div class="cmp-head ${s.hdrClass}" style="background:${subjectBg(s)};">
       <div>
         <div class="cmp-kicker">${s.label} · ${currentCat}</div>
         <div class="cmp-title">${col.title}</div>
