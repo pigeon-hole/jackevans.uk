@@ -144,7 +144,10 @@ body {
 .box--yellow .box-arrow    { color: rgba(255,255,255,0.65); }
 
 .box--red {
-  background: var(--red);
+  background:
+    linear-gradient(rgba(8,16,10,0.4), rgba(8,16,10,0.4)),
+    url(images/technology.avif) center bottom / cover,
+    var(--red);
   color: white;
 }
 .box--red .box-kicker      { color: rgba(255,255,255,0.5); }
@@ -724,6 +727,7 @@ const subjects = {
     hdrClass: 'hdr--yellow',
     bgColor: '#00B84C',
     bgImage: 'images/geography-world-map.jpg',
+    bgWash: 'rgba(240,226,192,0.35)',
     desc: 'Satellite imagery lets us observe change at scales invisible on the ground. These are examples of destruction, creation and natural process, documented from above.',
     categories: ['Destruction', 'Creation', 'Nature'],
     defaultCat: 'destruction',
@@ -788,6 +792,9 @@ const subjects = {
     colorClass: 'box--red',
     hdrClass: 'hdr--red',
     bgColor: '#E8001A',
+    bgImage: 'images/technology.avif',
+    bgWash: 'rgba(8,16,10,0.4)',
+    bgPosition: 'center bottom',
     desc: '',
     categories: [],
     defaultCat: null,
@@ -878,10 +885,10 @@ function openSubject(subjId, boxEl) {
   overlay.addEventListener('click', onOverlayClick);
 }
 
-// Headers sit dark text on the picture, so a light parchment wash keeps it legible.
+// The wash keeps header text legible over the picture: light under dark text, dark under white.
 function subjectBg(s) {
   if (!s.bgImage) return s.bgColor;
-  return `linear-gradient(rgba(240,226,192,0.35), rgba(240,226,192,0.35)), url(${s.bgImage}) center / cover, ${s.bgColor}`;
+  return `linear-gradient(${s.bgWash}, ${s.bgWash}), url(${s.bgImage}) ${s.bgPosition || 'center'} / cover, ${s.bgColor}`;
 }
 
 function buildSubjectHTML(s, activeCat) {
