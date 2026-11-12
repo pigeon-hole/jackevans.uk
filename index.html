@@ -184,8 +184,13 @@ body {
 /* Subject header (coloured area) */
 .subj-hdr {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   padding: 26px 48px 28px;
 }
+/* Extra height (see sizeSubjectHeader) opens up between "back" and the title. */
+.subj-hdr .subj-back { align-self: flex-start; margin-bottom: auto; }
+.subj-hdr .subj-name { margin-top: 14px; }
 
 .subj-back {
   font-size: 13px;
@@ -850,6 +855,14 @@ function clipToBox(boxEl) {
 }
 const CLIP_FULL = 'inset(0px 0px 0px 0px)';
 
+// The header is 50% taller than its content needs; its natural height varies with screen width.
+function sizeSubjectHeader() {
+  const hdr = document.querySelector('#subj-overlay .subj-hdr');
+  if (!hdr) return;
+  hdr.style.minHeight = '';
+  hdr.style.minHeight = Math.round(hdr.getBoundingClientRect().height * 1.5) + 'px';
+}
+
 function stopOverlayAnims() {
   overlayAnims.forEach(a => a.cancel());
   overlayAnims = [];
@@ -865,6 +878,7 @@ function openSubject(subjId, boxEl) {
   const overlay = document.getElementById('subj-overlay');
   overlay.style.cssText = `display: block; inset: 0; background: ${subjectBg(s)};`;
   overlay.innerHTML = buildSubjectHTML(s, currentCat);
+  sizeSubjectHeader();
   overlay.addEventListener('click', onOverlayClick);
 
   const duration = reduceMotion.matches ? 0 : OPEN_MS;
@@ -1236,6 +1250,7 @@ function getBoxPos(boxEl) {
 
 document.addEventListener('DOMContentLoaded', () => {
   renderHome();
+  window.addEventListener('resize', sizeSubjectHeader);
 
   const pop = document.getElementById('cmp-pop');
   pop.addEventListener('click', e => {
