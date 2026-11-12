@@ -23,40 +23,31 @@
 html, body { overflow: hidden; height: 100%; }
 
 body {
-  background: #2B2521;
+  background: var(--yellow);
   font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* ---- STAGE ---- */
-#scene {
+.page {
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.magazine {
-  width: 794px;
-  height: 1123px;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.page {
-  position: absolute;
-  inset: 0;
   background: var(--yellow);
-  box-shadow:
-    0 4px 6px rgba(0,0,0,0.15),
-    0 20px 60px rgba(0,0,0,0.5);
   overflow: hidden;
 }
 
 /* ---- MASTHEAD ---- */
 #home-view {
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 31px; /* room for the fixed footer */
   background: var(--yellow);
+}
+#subj-boxes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .mast {
@@ -92,7 +83,10 @@ body {
 /* ---- HOME: SUBJECT BOXES ---- */
 .subj-box {
   width: 100%;
-  padding: 28px 36px 24px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(14px, 2.6vh, 28px) 36px clamp(12px, 2.2vh, 24px);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -112,7 +106,7 @@ body {
 .box-title {
   font-family: 'Barlow Condensed', Impact, sans-serif;
   font-weight: 900;
-  font-size: 108px;
+  font-size: clamp(48px, min(17vw, 14vh), 220px);
   line-height: 0.88;
   letter-spacing: -2px;
   text-transform: uppercase;
@@ -209,7 +203,7 @@ body {
 }
 
 .subj-back {
-  font-size: 8.5px;
+  font-size: 10px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
   cursor: pointer;
@@ -225,7 +219,7 @@ body {
 .subj-name {
   font-family: 'Barlow Condensed', Impact, sans-serif;
   font-weight: 900;
-  font-size: 56px;
+  font-size: clamp(44px, 7vw, 96px);
   line-height: 0.9;
   letter-spacing: -1px;
   text-transform: uppercase;
@@ -234,11 +228,12 @@ body {
 
 .subj-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .subj-tab {
-  font-size: 8.5px;
+  font-size: 10px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
   padding: 5px 12px;
@@ -275,10 +270,10 @@ body {
 
 .subj-desc {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 11.5px;
-  line-height: 1.72;
+  font-size: 15px;
+  line-height: 1.65;
   color: #2a2a2a;
-  max-width: 560px;
+  max-width: 680px;
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(17,17,17,0.12);
@@ -286,7 +281,7 @@ body {
 
 /* Category section heading */
 .cat-label {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--muted);
@@ -296,8 +291,8 @@ body {
 /* ---- EXAMPLE CARDS ---- */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px 20px;
   transition: opacity 0.15s;
 }
 
@@ -308,7 +303,7 @@ body {
 
 .card-img {
   background: #CBC6B5;
-  height: 120px;
+  aspect-ratio: 16 / 10;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,7 +320,7 @@ body {
 .card-title {
   font-family: 'Barlow Condensed', Impact, sans-serif;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 20px;
   text-transform: uppercase;
   color: var(--ink);
   line-height: 1.1;
@@ -334,14 +329,14 @@ body {
 
 .card-desc {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 10px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.55;
   color: #3a3a3a;
   flex-grow: 1;
 }
 
 .card-coords {
-  font-size: 7.5px;
+  font-size: 9px;
   letter-spacing: 1.5px;
   color: var(--muted);
   margin-top: 6px;
@@ -350,7 +345,7 @@ body {
 
 .coming-soon {
   grid-column: 1 / -1;
-  min-height: 620px;
+  min-height: 55vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -396,9 +391,9 @@ body {
   left: 0; bottom: 0;
   background: var(--ink);
   color: white;
-  font-size: 7.5px;
+  font-size: 9px;
   letter-spacing: 1.5px;
-  padding: 4px 7px;
+  padding: 5px 8px;
 }
 
 /* ---- BEFORE / AFTER POP-UP ---- */
@@ -417,7 +412,10 @@ body {
 #cmp-pop.open { opacity: 1; pointer-events: auto; }
 
 .cmp-panel {
-  width: 722px;
+  width: min(1280px, calc(100vw - 64px));
+  max-height: calc(100% - 48px);
+  display: flex;
+  flex-direction: column;
   background: var(--paper);
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   transform: translateY(14px);
@@ -446,14 +444,15 @@ body {
 .cmp-title {
   font-family: 'Barlow Condensed', Impact, sans-serif;
   font-weight: 900;
-  font-size: 40px;
+  font-size: clamp(32px, 4vw, 56px);
   line-height: 0.9;
   letter-spacing: -0.5px;
   text-transform: uppercase;
 }
 
 .cmp-close {
-  font-size: 8.5px;
+  font-size: 11px;
+  padding: 6px 0 6px 12px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
   cursor: pointer;
@@ -465,7 +464,9 @@ body {
 .cmp-stage {
   --pos: 50%;
   position: relative;
-  height: 500px;
+  height: min(68vh, 760px);
+  flex-shrink: 1;
+  min-height: 0;
   overflow: hidden;
   background: var(--ink);
   cursor: ew-resize;
@@ -583,7 +584,7 @@ body {
 
 .cmp-desc {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 11.5px;
+  font-size: 15px;
   line-height: 1.72;
   color: #2a2a2a;
   margin-bottom: 8px;
@@ -591,18 +592,36 @@ body {
 
 .cmp-meta {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  font-size: 7.5px;
+  gap: 4px 16px;
+  font-size: 9px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+/* ---- PHONES ---- */
+@media (max-width: 640px) {
+  .mast              { padding: 16px 16px 10px; }
+  .subj-box          { padding-left: 16px; padding-right: 16px; }
+  .box-kicker        { letter-spacing: 2px; }
+  .box-cats,
+  .box-arrow         { letter-spacing: 1.5px; }
+  .page-foot         { padding: 10px 16px; }
+  .subj-hdr          { padding: 14px 16px 16px; }
+  .subj-content      { padding: 18px 16px 56px; }
+  .subj-desc         { font-size: 14px; }
+
+  .cmp-panel         { width: 100%; height: 100%; max-height: 100%; }
+  .cmp-head          { padding: 14px 16px 12px; }
+  .cmp-stage         { flex: 1; height: auto; }
+  .cmp-foot          { padding: 12px 16px 16px; }
 }
 </style>
 </head>
 <body>
 
-<div id="scene">
-  <div class="magazine" id="mag">
     <div class="page" id="page">
 
       <!-- Home view -->
@@ -627,8 +646,6 @@ body {
       </div>
 
     </div>
-  </div>
-</div>
 
 <script>
 /* ===================== DATA ===================== */
@@ -666,7 +683,7 @@ const subjects = {
         { title: 'Milton Keynes, UK',    desc: 'New town planned and built on agricultural land from 1967, following a strict grid.',    coords: '52.0° N, 0.7° W',
           // Static screenshots: both are the same view, so cropping them identically keeps them aligned.
           compare: {
-            height: 380,
+            aspect: 1.9,
             focus:  '46% 45%',
             credit: 'Imagery: Google Earth',
             before: { label: 'Before · 1945', src: 'images/milton-keynes-1945.webp' },
@@ -713,7 +730,6 @@ subjects.culture = {
 };
 
 const subjectOrder = ['geography', 'technology', 'culture'];
-const boxHeights   = { geography: 340, technology: 340, culture: 340 };
 
 /* ===================== HOME VIEW ===================== */
 
@@ -722,7 +738,7 @@ function renderHome() {
   container.innerHTML = subjectOrder.map(id => {
     const s = subjects[id];
     return `
-    <div class="subj-box ${s.colorClass}" data-subject="${id}" style="height:${boxHeights[id]}px;">
+    <div class="subj-box ${s.colorClass}" data-subject="${id}">
       <div>
         <div class="box-kicker">${s.kicker}</div>
         <div class="box-title">${s.label}</div>
@@ -772,8 +788,8 @@ function openSubject(subjId, boxEl) {
   overlay.style.transition = 'top 0.45s cubic-bezier(0.4,0,0.2,1), left 0.45s cubic-bezier(0.4,0,0.2,1), width 0.45s cubic-bezier(0.4,0,0.2,1), height 0.45s cubic-bezier(0.4,0,0.2,1)';
   overlay.style.top    = '0';
   overlay.style.left   = '0';
-  overlay.style.width  = '794px';
-  overlay.style.height = '1123px';
+  overlay.style.width  = '100%';
+  overlay.style.height = '100%';
 
   setTimeout(() => {
     const view = overlay.querySelector('.subj-view');
@@ -810,7 +826,7 @@ function buildThumbHalf(map, release) {
   const world = 256 * 2 ** zoom;
   const px = (map.center[1] + 180) / 360 * world;
   const py = (1 - Math.asinh(Math.tan(map.center[0] * Math.PI / 180)) / Math.PI) / 2 * world;
-  const reach = 64;
+  const reach = 192; // covers a thumbnail half up to 384px across
 
   let tiles = '';
   for (let tx = Math.floor((px - reach) / 256); tx * 256 < px + reach; tx++) {
@@ -987,7 +1003,7 @@ function openCompare(ex) {
       </div>
       <div class="cmp-close" data-action="cmp-close">close ×</div>
     </div>
-    <div class="cmp-stage ${c.map ? 'cmp-stage--map' : ''}" id="cmp-stage" ${c.height ? `style="height:${c.height}px;"` : ''}>
+    <div class="cmp-stage ${c.map ? 'cmp-stage--map' : ''}" id="cmp-stage" ${c.aspect ? `style="height:auto; aspect-ratio:${c.aspect}; max-height:68vh;"` : ''}>
       ${layers}
       <div class="cmp-bar" tabindex="0" role="slider" aria-label="Before and after divider"
            aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><div class="cmp-knob">◂ ▸</div></div>
@@ -1048,28 +1064,18 @@ function getBoxPos(boxEl) {
   const page    = document.getElementById('page');
   const pageR   = page.getBoundingClientRect();
   const boxR    = boxEl.getBoundingClientRect();
-  const scale   = document.getElementById('mag').getBoundingClientRect().width / 794;
 
   return {
-    top:    (boxR.top  - pageR.top)  / scale,
-    left:   (boxR.left - pageR.left) / scale,
-    width:  boxR.width  / scale,
-    height: boxR.height / scale
+    top:    boxR.top  - pageR.top,
+    left:   boxR.left - pageR.left,
+    width:  boxR.width,
+    height: boxR.height
   };
-}
-
-function scaleScene() {
-  const m = document.getElementById('mag');
-  const s = Math.min((innerWidth - 40) / 794, (innerHeight - 40) / 1123, 1);
-  m.style.transform       = `scale(${s})`;
-  m.style.transformOrigin = 'center center';
 }
 
 /* ===================== INIT ===================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  scaleScene();
-  window.addEventListener('resize', scaleScene);
   renderHome();
 
   const pop = document.getElementById('cmp-pop');
