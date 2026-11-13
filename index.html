@@ -510,7 +510,7 @@ body {
   box-shadow: 0 0.4cqw 1.2cqw rgba(0,0,0,0.22);
 }
 /* The poster runs from the top of the screenshot down beside the title, stopping just above the cast,
-   in its own shape (about 2:3), centred in the space. Square corners, unlike the screenshot.
+   in its own shape (about 2:3), against the right edge. Square corners, unlike the screenshot.
    It's positioned inside an empty area so it can't make the rows any taller. */
 .show-poster-area {
   grid-area: poster;
@@ -520,9 +520,8 @@ body {
   position: absolute;
   top: 0;
   bottom: 2.4cqh;
-  left: 50%;
+  right: 0;
   aspect-ratio: 2 / 3;
-  transform: translateX(-50%);
   border-radius: 0;
 }
 /* The description isn't shown, but screen readers still read it out. */
@@ -545,30 +544,29 @@ body {
   margin: 2.75cqh 0 4.45cqh 1.8cqw;   /* puts the letters midway between screenshot and cast; the left margin indents it */
   white-space: nowrap;
 }
-/* Bottom row: the cast photos, then the network logo centred in the space between the last
-   photo and the edge of the screen (slightly right of centre). */
+/* Bottom row, on the same two columns as the top: the three cast photos together exactly as wide as
+   the screenshot above them, and the network logo against the right edge, under the poster. */
 .show-bottom {
   grid-area: bottom;
-  display: flex;
+  display: grid;
+  grid-template-columns: 62% 1fr;
+  column-gap: 4cqw;
   min-height: 0;
-  margin-right: -6cqw;          /* reach the screen's edge, past the page's padding */
 }
 .show-cast {
-  flex: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 3cqw;
   min-height: 0;
 }
 .show-cast > * {
   height: 100%;
-  aspect-ratio: 4 / 5;
+  min-width: 0;
 }
 .show-network {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding-left: 0;              /* centred between the last cast photo and the screen's edge */
+  justify-content: flex-end;
 }
 .show-page img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .show-page .net-logo { width: auto; height: auto; max-width: 30cqw; max-height: 18cqh; object-fit: contain; }
