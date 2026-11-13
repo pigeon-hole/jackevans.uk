@@ -541,9 +541,22 @@ body {
   line-height: 0.74;            /* about the capitals' height, so equal margins centre the letters */
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  margin: 2.75cqh 0 4.45cqh 1.8cqw;   /* puts the letters midway between screenshot and cast; the left margin indents it */
+  margin: 3.3cqh 0 3.9cqh;      /* puts the letters midway between screenshot and cast (checked on the drawn pixels) */
+  justify-self: center;         /* and centred across the screenshot's width */
+  padding-left: 0.02em;         /* balances the letter-spacing browsers add after the last letter */
+  max-width: 100%;
   white-space: nowrap;
 }
+/* A show's own logo, if its folder has one (shows/<id>/logo.webp), takes the written title's place:
+   the same height as the letters, so it sits in the same spot. */
+.show-page .show-logo {
+  display: block;
+  height: 7cqw;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.show-page .show-logo[hidden] { display: none; }
 /* Bottom row, on the same two columns as the top: the three cast photos together exactly as wide as
    the screenshot above them, and the network logo against the right edge, under the poster. */
 .show-bottom {
@@ -568,6 +581,19 @@ body {
   align-items: center;
   justify-content: flex-end;
 }
+/* Mirrored layout (SHOW_MIRRORED): poster and network logo on the left, screenshot, title and cast on the right. */
+.show-page--mirror {
+  grid-template-columns: 1fr 62%;
+  grid-template-areas:
+    "poster still"
+    "poster title"
+    "bottom bottom";
+}
+.show-page--mirror .show-bottom  { grid-template-columns: 1fr 62%; }
+.show-page--mirror .show-network { grid-column: 1; grid-row: 1; justify-content: flex-start; }
+.show-page--mirror .show-cast    { grid-column: 2; grid-row: 1; }
+.show-page--mirror .show-poster  { right: auto; left: 0; }
+
 .show-page img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .show-page .net-logo { width: auto; height: auto; max-width: 30cqw; max-height: 18cqh; object-fit: contain; }
 .show-ph {     /* grey box where a picture hasn't been added yet */
@@ -649,6 +675,29 @@ body {
   font-family: 'Barlow', Arial, sans-serif;
 }
 .tv-close:hover { color: white; }
+
+/* A picture from the TV screen, enlarged: it grows out of its spot on the screen. */
+#img-pop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+}
+#img-pop.open { display: block; }
+.img-pop-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10,10,10,0.82);
+}
+.img-pop-img {
+  position: absolute;
+  display: block;
+  transform-origin: 0 0;
+  box-shadow: 0 1.5vmin 5vmin rgba(0,0,0,0.5);
+  user-select: none;
+  cursor: zoom-out;
+  will-change: transform;
+}
 
 .coming-soon {
   grid-column: 1 / -1;
@@ -923,6 +972,9 @@ body {
 
       <!-- Picture-button pop-up: the TV grows out of its button and its screen holds the content -->
       <div id="tv-pop"></div>
+
+      <!-- A picture from the TV screen, enlarged -->
+      <div id="img-pop"></div>
 
       <div class="page-foot"></div>
 
@@ -1399,16 +1451,22 @@ function networkInType(n) {
   return `<div class="net-plain" style="color:${colour}">${escapeHTML(n.name)}</div>`;
 }
 
+// true: poster and network logo on the left, screenshot / title / cast on the right; false: the other way round.
+const SHOW_MIRRORED = false;
+
 function buildShowPage(show) {
   if (!show) return '<div class="tv-nosignal">No signal</div>';
   const dir  = `shows/${show.id}/`;
   const cast = [0, 1, 2].map(i => (show.cast || [])[i]);   // always three photos; the names are optional labels
   return `
-  <div class="show-page">
+  <div class="show-page${SHOW_MIRRORED ? ' show-page--mirror' : ''}">
     ${showImg(dir + 'still.webp', show.title + ' — still', 'show-still')}
     <div class="show-poster-area">${showImg(dir + 'poster.webp', show.title + ' — poster', 'show-poster')}</div>
     <p class="show-desc">${escapeHTML(show.description)}</p>
-    <div class="show-title" style="color:${show.titleColour || '#1f4e79'}">${escapeHTML(show.title)}</div>
+    <div class="show-title" style="color:${show.titleColour || '#1f4e79'}">
+      <img class="show-logo" src="${dir}logo.webp" alt="${escapeHTML(show.title)}" draggable="false"
+           onerror="this.hidden = true; this.nextElementSibling.hidden = false;"><span hidden>${escapeHTML(show.title)}</span>
+    </div>
     <div class="show-bottom">
       <div class="show-cast">${cast.map((name, i) => showImg(`${dir}cast-${i + 1}.webp`, name || 'Cast member', 'show-cast-member')).join('')}</div>
       <div class="show-network">${buildNetwork(show.network)}</div>
@@ -1445,6 +1503,9 @@ function changeChannel(step) {
    of pixels, which made text and edges jagged. */
 
 const CURVE = 0.018;   // how far the middle of each edge is pulled in, as a share of half the screen (corners ≈ 2×)
+// Vignette strengths (0 = none): a light darkening along the edges, and stronger shading in the corners.
+const VIGNETTE_EDGE   = 0.16;
+const VIGNETTE_CORNER = 0.32;
 
 // Copies the laid-out page into a canvas (backgrounds, borders, shadows, pictures and text, each where
 // the CSS put it). scale = canvas pixels per CSS pixel.
@@ -1541,7 +1602,7 @@ precision mediump float;
 varying vec2 uv;
 uniform sampler2D page;
 uniform vec2 size;
-uniform float curve, radius, grain, staticAmt, seed;
+uniform float curve, radius, grain, staticAmt, seed, vignetteEdge, vignetteCorner;
 void main() {
   vec2 p = uv * 2.0 - 1.0;
   vec2 q = p * (1.0 + curve * dot(p, p));
@@ -1549,9 +1610,15 @@ void main() {
   vec2 d = abs(q) * halfSize - (halfSize - radius);
   float dist = length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
   float inside = 1.0 - smoothstep(-1.0, 1.0, dist);
-  vec3 col = texture2D(page, clamp(q * 0.5 + 0.5, 0.0, 1.0)).rgb;
+  vec2 s = clamp(q * 0.5 + 0.5, 0.0, 1.0);
+  vec3 col = texture2D(page, s).rgb;
   float n = fract(sin(dot(floor(gl_FragCoord.xy / grain) + seed, vec2(12.9898, 78.233))) * 43758.5453);
   col = mix(col, vec3(n), staticAmt);
+  // Vignette, in two parts: a light darkening right along the curved edges, and a stronger shading
+  // that only builds up towards the corners (it's zero across the middle and the middle of each edge).
+  float nearEdge = 1.0 - pow(min(4.0 * s.x * (1.0 - s.x), 4.0 * s.y * (1.0 - s.y)), 0.25);
+  float nearCorner = smoothstep(0.95, 1.42, length(q));
+  col *= 1.0 - vignetteEdge * nearEdge - vignetteCorner * nearCorner;
   gl_FragColor = vec4(mix(vec3(0.047, 0.055, 0.051), col, inside), 1.0);
 }`;
 const CRT_VERT = `
@@ -1591,6 +1658,8 @@ function makeCrt(canvas, screen) {
   const u = name => gl.getUniformLocation(prog, name);
   gl.uniform2f(u('size'), W, H);
   gl.uniform1f(u('curve'), CURVE);
+  gl.uniform1f(u('vignetteEdge'), VIGNETTE_EDGE);
+  gl.uniform1f(u('vignetteCorner'), VIGNETTE_CORNER);
   gl.uniform1f(u('radius'), Math.min(W, H) * 0.045);   // corner rounding
   gl.uniform1f(u('grain'), 2 * scale);                  // static speckle size
   gl.uniform1f(u('staticAmt'), 0);
@@ -1602,6 +1671,111 @@ function makeCrt(canvas, screen) {
     draw() { gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); },
     destroy() { const ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); }
   };
+}
+
+/* ---- Clicking a picture on the TV screen ---- */
+
+// The screen is one bent drawing, so a click is traced back through the curve to the laid-out page
+// to find which picture is under it. Returns { el, img } or null.
+function tvImageAt(clientX, clientY) {
+  if (!tvPop || tvPop.closing) return null;
+  const screen = tvPop.frame.querySelector('.tv-screen').getBoundingClientRect();
+  const px = (clientX - screen.left) / screen.width * 2 - 1;
+  const py = (clientY - screen.top) / screen.height * 2 - 1;
+  const bend = 1 + CURVE * (px * px + py * py);      // the same bend as the picture (see CRT_FRAG)
+  const qx = px * bend, qy = py * bend;
+  if (Math.abs(qx) > 1 || Math.abs(qy) > 1) return null;
+  const page = tvPop.pageSrc.getBoundingClientRect();
+  const x = page.left + (qx + 1) / 2 * page.width, y = page.top + (qy + 1) / 2 * page.height;
+  for (const el of tvPop.pageSrc.querySelectorAll('.show-still, .show-poster, .show-cast-member')) {
+    const img = el.querySelector('img');
+    if (!img || !img.naturalWidth) continue;          // a grey box, not a picture yet
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return { el, img };
+  }
+  return null;
+}
+
+// Where a page element appears on the bent screen (the reverse of the curve), in page coordinates.
+function tvShownRect(el) {
+  const screen = tvPop.frame.querySelector('.tv-screen').getBoundingClientRect();
+  const page = tvPop.pageSrc.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const unbend = (qx, qy) => {                         // solve p · (1 + CURVE·|p|²) = q
+    let px = qx, py = qy;
+    for (let i = 0; i < 4; i++) { const b = 1 + CURVE * (px * px + py * py); px = qx / b; py = qy / b; }
+    return [screen.left + (px + 1) / 2 * screen.width, screen.top + (py + 1) / 2 * screen.height];
+  };
+  const toQ = (x, y) => [(x - page.left) / page.width * 2 - 1, (y - page.top) / page.height * 2 - 1];
+  const pts = [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]].map(([x, y]) => unbend(...toQ(x, y)));
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const left = Math.min(...xs), top = Math.min(...ys);
+  return { left, top, width: Math.max(...xs) - left, height: Math.max(...ys) - top };
+}
+
+let imgPop = null;   // { el, frame, backdrop, close, startT, startClip, anims, closing }
+
+// The enlarged picture starts exactly over its (cropped) spot on the screen, then grows to fit the window.
+function openImagePop(hit) {
+  if (imgPop) return;
+  const pop  = document.getElementById('img-pop');
+  const page = document.getElementById('page').getBoundingClientRect();
+  const img  = hit.img;
+  const aspect = img.naturalWidth / img.naturalHeight;
+  const w = Math.min(page.width * 0.88, page.height * 0.85 * aspect), h = w / aspect;
+  const to = { left: (page.width - w) / 2, top: (page.height - h) / 2 };
+  const from = tvShownRect(hit.el);
+
+  // Start: scaled down to cover the spot it came from, cropped to that spot's shape (as on the screen).
+  const s  = Math.max(from.width / w, from.height / h);
+  const tx = from.left + from.width / 2 - page.left - to.left - s * w / 2;
+  const ty = from.top + from.height / 2 - page.top - to.top - s * h / 2;
+  const cropX = (w - from.width / s) / 2, cropY = (h - from.height / s) / 2;
+
+  pop.innerHTML = `
+    <div class="img-pop-backdrop"></div>
+    <img class="img-pop-img" src="${escapeHTML(img.currentSrc || img.src)}" alt="${escapeHTML(img.alt)}" draggable="false"
+         style="left:${to.left}px; top:${to.top}px; width:${w}px; height:${h}px;">
+    <button type="button" class="tv-close">close ×</button>`;
+  pop.classList.add('open');
+  imgPop = { el: pop.querySelector('.img-pop-img'), backdrop: pop.querySelector('.img-pop-backdrop'), close: pop.querySelector('.tv-close'),
+             startT: `translate(${tx}px, ${ty}px) scale(${s})`, startClip: `inset(${cropY}px ${cropX}px)`, anims: [], closing: false };
+  animateImagePop(true);
+}
+
+function animateImagePop(open) {
+  const st = imgPop;
+  const quick = reduceMotion.matches;
+  const d = quick ? 0 : (open ? 480 : 360);
+  const first = open && !st.anims.length;   // otherwise carry on from wherever it has got to
+  const cs = getComputedStyle(st.el);
+  const from = first
+    ? { transform: st.startT, clipPath: st.startClip }
+    : { transform: cs.transform === 'none' ? 'translate(0px, 0px) scale(1)' : cs.transform, clipPath: cs.clipPath === 'none' ? 'inset(0px 0px)' : cs.clipPath };
+  const bdFrom = first ? 0 : +getComputedStyle(st.backdrop).opacity;
+  const clFrom = first ? 0 : +getComputedStyle(st.close).opacity;
+  st.anims.forEach(a => a.cancel());
+  const ease = open ? 'cubic-bezier(0.22, 1, 0.36, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)';
+  st.anims = [
+    st.el.animate([from, open ? { transform: 'translate(0px, 0px) scale(1)', clipPath: 'inset(0px 0px)' } : { transform: st.startT, clipPath: st.startClip }],
+      { duration: d, easing: ease, fill: 'forwards' }),
+    st.backdrop.animate([{ opacity: bdFrom }, { opacity: open ? 1 : 0 }], { duration: d * 0.8, fill: 'forwards' }),
+    st.close.animate([{ opacity: clFrom }, { opacity: open ? 1 : 0 }], { duration: d * (open ? 1 : 0.4), fill: 'forwards' })
+  ];
+}
+
+function closeImagePop() {
+  if (!imgPop || imgPop.closing) return;
+  const st = imgPop;
+  st.closing = true;
+  animateImagePop(false);
+  st.anims[0].finished.then(() => {
+    if (imgPop !== st) return;
+    const pop = document.getElementById('img-pop');
+    pop.classList.remove('open');
+    pop.innerHTML = '';
+    imgPop = null;
+  }).catch(() => {});
 }
 
 // Copies the current page into the TV's picture.
@@ -2044,10 +2218,22 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tv-pop').addEventListener('click', e => {
     const ch = e.target.closest('.tv-ch');
     if (ch) { changeChannel(+ch.dataset.ch); return; }
+    if (e.target.classList.contains('tv-gl')) {          // a picture on the screen: enlarge it
+      const hit = tvImageAt(e.clientX, e.clientY);
+      if (hit) openImagePop(hit);
+      return;
+    }
     if (!e.target.closest('.tv-frame') || e.target.closest('.tv-close')) closeTvPop();
   });
+  // A magnifying-glass pointer over pictures that can be enlarged.
+  document.getElementById('tv-pop').addEventListener('mousemove', e => {
+    if (e.target.classList.contains('tv-gl')) e.target.style.cursor = tvImageAt(e.clientX, e.clientY) ? 'zoom-in' : '';
+  });
+  // Clicking anywhere on an enlarged picture (or "close") shrinks it back onto the screen.
+  document.getElementById('img-pop').addEventListener('click', closeImagePop);
 
   document.addEventListener('keydown', e => {
+    if (imgPop) { if (e.key === 'Escape') closeImagePop(); return; }
     if (tvPop && !tvPop.closing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       changeChannel(e.key === 'ArrowRight' ? 1 : -1);
       return;
