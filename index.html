@@ -366,6 +366,272 @@ body {
   font-family: 'Barlow', Arial, sans-serif;
 }
 
+.img-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 32px;
+}
+.img-btn {
+  width: clamp(160px, 26vw, 280px);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.img-btn img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Light from the upper right: a soft shadow to the left and below gives the pale left side some depth. */
+  filter: drop-shadow(-5px 3px 4px rgba(0,0,0,0.24)) drop-shadow(-10px 10px 16px rgba(0,0,0,0.24));
+}
+.img-btn:hover { transform: translateY(-4px) scale(1.03); }
+.img-btn:active { transform: translateY(-1px) scale(1.01); }
+.img-btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 6px; }
+
+/* The TV pop-up: the cut-out grows from its button to fill most of the screen.
+   .tv-screen sits exactly over the TV's glass and is where its content will go. */
+#tv-pop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: none;
+}
+#tv-pop.open { display: block; }
+.tv-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17,17,17,0.72);
+}
+.tv-frame {
+  position: absolute;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.tv-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+.tv-screen {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 3.4% / 4.5%;   /* the glass's rounded corners */
+  container-type: size;         /* lets what's inside size itself to the screen (cqw / cqh) */
+}
+/* Black screen behind the picture (dark glass while the picture switches on and off). */
+.tv-black {
+  position: absolute;
+  inset: 0;
+  background: #0c0e0d;
+  opacity: 0;
+}
+/* What's showing on the TV. The page is laid out in HTML (.tv-page-src: positions come from the CSS
+   below) but kept invisible; it's copied into an image and drawn bent like curved glass on .tv-gl
+   (see makeCrt). The invisible page is still read out by screen readers. */
+.tv-content {
+  position: absolute;
+  inset: 0;
+  opacity: 0;                   /* off until the TV has finished growing */
+}
+.tv-page-src {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.tv-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* The glass in front of the picture: it makes flat content read as a curved CRT.
+   Edge shadow (the surround overhangs the glass), vignette (bulge), scanlines and a reflection. */
+.tv-glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  background:
+    linear-gradient(155deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.04) 26%, transparent 42%),
+    radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(0,0,0,0.38) 100%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 1px, transparent 1px 3px);
+  box-shadow:
+    inset 0 0 2.2cqw 0.6cqw rgba(0,0,0,0.6),
+    inset 0 0 7cqw rgba(0,0,0,0.25);
+}
+/* A faint brighter band that slowly rolls down the picture. */
+.tv-glass::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 18%;
+  top: -18%;
+  background: linear-gradient(transparent, rgba(255,255,255,0.035), transparent);
+  animation: tv-roll 7s linear infinite;
+}
+@keyframes tv-roll { to { top: 100%; } }
+@media (prefers-reduced-motion: reduce) { .tv-glass::after { animation: none; display: none; } }
+
+/* One TV show per page (data in shows.json). Sizes are in cqw/cqh, i.e. relative to the screen,
+   so the page scales with the TV. Screenshot top-left, description top-right, title, then cast
+   bottom-left and network bottom-right. */
+.show-page {
+  position: absolute;
+  inset: 0;
+  background: #fbfaf6;
+  color: #1b1b1b;
+  padding: 6cqh 6cqw 7cqh;
+  display: grid;
+  grid-template-columns: 62% 1fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "still desc"
+    "title  ."
+    "bottom bottom";
+  column-gap: 4cqw;
+}
+.show-still {
+  grid-area: still;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  /* Rounded, with a thin dark bezel and a soft shadow to set it apart from the page. */
+  border-radius: 1.4cqw;
+  overflow: hidden;
+  border: 0.45cqw solid #2b2a28;
+  box-shadow: 0 0.4cqw 1.2cqw rgba(0,0,0,0.22);
+}
+.show-desc {
+  grid-area: desc;
+  font-family: 'Barlow', Arial, sans-serif;
+  font-size: 2.9cqw;
+  line-height: 1.35;
+  color: #222;
+}
+.show-title {
+  grid-area: title;
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  font-size: 9.5cqw;
+  line-height: 0.74;            /* about the capitals' height, so equal margins centre the letters */
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 2.75cqh 0 4.45cqh 1.8cqw;   /* puts the letters midway between screenshot and cast; the left margin indents it */
+  white-space: nowrap;
+}
+/* Bottom row: the cast photos, then the network logo centred in the space between the last
+   photo and the edge of the screen (slightly right of centre). */
+.show-bottom {
+  grid-area: bottom;
+  display: flex;
+  min-height: 0;
+  margin-right: -6cqw;          /* reach the screen's edge, past the page's padding */
+}
+.show-cast {
+  flex: none;
+  display: flex;
+  gap: 3cqw;
+  min-height: 0;
+}
+.show-cast > * {
+  height: 100%;
+  aspect-ratio: 4 / 5;
+}
+.show-network {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 0;              /* centred between the last cast photo and the screen's edge */
+}
+.show-page img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.show-page .net-logo { width: auto; height: auto; max-width: 30cqw; max-height: 18cqh; object-fit: contain; }
+.show-ph {     /* grey box where a picture hasn't been added yet */
+  background: #d9d5cb;
+}
+
+/* Networks are drawn as type rather than logo images. */
+.net-bbc { display: flex; flex-direction: column; align-items: center; gap: 0.8cqh; }
+.net-bbc-blocks { display: flex; gap: 0.7cqw; }
+.net-bbc-blocks span {
+  width: 3.6cqw; height: 3.6cqw;
+  display: grid; place-items: center;
+  font-family: 'Barlow', Arial, sans-serif; font-weight: 700; font-size: 2.7cqw; line-height: 1;
+  color: #fff;
+}
+.net-bbc-channel, .net-plain {
+  font-family: 'Barlow', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 7cqw;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.net-plain { font-size: 4cqw; color: #555; }
+
+.tv-nosignal {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-family: 'Barlow Condensed', Impact, sans-serif; font-weight: 700; font-size: 6cqw;
+  letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.7);
+}
+
+
+/* Channel buttons: the "1" and "12" windows on the TV's front glow orange; 1 goes back, 12 forwards. */
+.tv-frame { container-type: inline-size; }
+.tv-ch {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 0.6cqw;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255,140,30,0.32), rgba(255,140,30,0.08) 70%, transparent);
+  box-shadow: 0 0 1.2cqw rgba(255,140,30,0.45), inset 0 0 0.8cqw rgba(255,150,40,0.35);
+  cursor: pointer;
+  transition: box-shadow 0.15s, background 0.15s;
+}
+.tv-ch::before {     /* the indicator light at the top of the window */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 9%;
+  width: 1.15cqw;
+  height: 1.15cqw;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle at 40% 35%, #ffe2b0, #ff9a1f 55%, #d45a00);
+  box-shadow: 0 0 0.6cqw 0.2cqw rgba(255,150,30,0.9), 0 0 2cqw 0.6cqw rgba(255,120,20,0.45);
+  animation: tv-ch-glow 2.4s ease-in-out infinite;
+}
+@keyframes tv-ch-glow { 50% { filter: brightness(1.25); } }
+.tv-ch:hover {
+  background: radial-gradient(ellipse at 50% 55%, rgba(255,150,40,0.5), rgba(255,140,30,0.15) 70%, transparent);
+  box-shadow: 0 0 2cqw rgba(255,140,30,0.7), inset 0 0 1cqw rgba(255,160,50,0.5);
+}
+.tv-ch:active::before { filter: brightness(1.6); }
+.tv-ch:focus-visible { outline: 2px solid #ffb35c; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .tv-ch::before { animation: none; } }
+.tv-close {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+  background: none;
+  border: 0;
+  padding: 6px 0 6px 12px;
+  cursor: pointer;
+  font-family: 'Barlow', Arial, sans-serif;
+}
+.tv-close:hover { color: white; }
+
 .coming-soon {
   grid-column: 1 / -1;
   min-height: 55vh;
@@ -637,6 +903,9 @@ body {
 
       <div id="cmp-pop"></div>
 
+      <!-- Picture-button pop-up: the TV grows out of its button and its screen holds the content -->
+      <div id="tv-pop"></div>
+
       <div class="page-foot"></div>
 
     </div>
@@ -658,10 +927,11 @@ const subjects = {
     catBackgrounds: {
       destruction: { src: 'images/geography-destruction.jpg', position: 'center 30%', wash: 'rgba(240,226,192,0.45)', filter: 'contrast(1.15)' },
       creation:    { src: 'images/geography-creation.jpg',    position: 'center 70%', wash: 'rgba(240,226,192,0.25)' },
-      nature:      { src: 'images/geography-nature-stop.jpg', position: 'center 40%', wash: 'rgba(240,226,192,0.3)', filter: 'sepia(0.35)' }
+      nature:      { src: 'images/geography-nature-stop.jpg', position: 'center 40%', wash: 'rgba(240,226,192,0.3)', filter: 'sepia(0.35)' },
+      event:       { src: 'images/geography-event.jpg',      position: 'center 45%', wash: 'rgba(240,226,192,0.5)' }
     },
     desc: '',
-    categories: ['Destruction', 'Creation', 'Nature'],
+    categories: ['Destruction', 'Creation', 'Nature', 'Event'],
     defaultCat: 'destruction',
     examples: {
       destruction: [
@@ -701,7 +971,17 @@ const subjects = {
             after:  { label: 'After · 2020s', release: 43291 }
           } },
       ],
-      nature: []
+      nature: [],
+      event: [
+        { title: 'Inauguration Day, Washington DC', desc: 'Crowds fill the National Mall around the Washington Monument for Barack Obama’s first inauguration, 20 January 2009 — against an ordinary winter’s day.', coords: '38.9° N, 77.0° W',
+          // Google Earth screenshots, aligned by hand and cropped to the same 1137×625 area.
+          compare: {
+            aspect: 1.82,
+            credit: 'Imagery: Google Earth',
+            before: { label: 'Inauguration · 20 Jan 2009', src: 'images/washington-2009-inauguration.webp' },
+            after:  { label: 'Ordinary day', src: 'images/washington-ordinary-day.webp' }
+          } }
+      ]
     }
   },
   technology: {
@@ -733,7 +1013,16 @@ subjects.culture = {
   desc: '',
   categories: [],
   defaultCat: null,
-  examples: {}
+  examples: {},
+  // screen = where the TV's glass sits in the picture, as fractions of its width and height;
+  // clicking the button grows it into a pop-up showing the TV shows from shows.json.
+  // prev / next = the "1" and "12" channel windows on the front, which change show.
+  buttons: [
+    { id: 'tv', label: 'TV', img: 'images/culture-tv.webp',
+      screen: { left: 0.131, top: 0.119, width: 0.744, height: 0.575 },
+      prev:   { left: 0.315, top: 0.7625, width: 0.0335, height: 0.0395 },
+      next:   { left: 0.6945, top: 0.7625, width: 0.0345, height: 0.0395 } }
+  ]
 };
 
 const subjectOrder = ['geography', 'technology', 'culture'];
@@ -968,6 +1257,7 @@ function subjectBg(s) {
 function headerBg(s, cat) {
   const b = s.catBackgrounds && s.catBackgrounds[cat];
   if (!b) return subjectBg(s);
+  if (!b.src) return b.color || s.bgColor;   // a plain colour, no photo
   const wash = b.wash || s.bgWash;
   return `linear-gradient(${wash}, ${wash}), url(${b.src}) ${b.position || 'center'} / cover, ${s.bgColor}`;
 }
@@ -1031,7 +1321,433 @@ function buildCardImage(ex) {
   return `<div class="card-img">[ ${ex.title} ]${tag}</div>`;
 }
 
+// Cut-out pictures used as buttons (a subject without tabs can show these instead of cards).
+function buildImageButtons(s) {
+  return `<div class="img-buttons">${s.buttons.map(b => `
+    <button type="button" class="img-btn" data-btn="${b.id}" aria-label="${b.label}">
+      <img src="${b.img}" alt="" draggable="false">
+    </button>`).join('')}
+  </div>`;
+}
+
+/* ---- TV shows (shows.json) ---- */
+
+// Each show's pictures live in shows/<id>/ under fixed names; network logos in shows/_networks/<network>.webp.
+let tvShows    = null;   // filled from shows.json when the page loads
+let tvNetworks = {};
+let tvChannel  = 0;      // which show is on
+
+function loadShows() {
+  return fetch('shows.json', { cache: 'no-cache' })
+    .then(r => r.json())
+    .then(d => { tvShows = d.shows || []; tvNetworks = d.networks || {}; })
+    .catch(() => { tvShows = []; })
+    .then(() => {   // the TV was opened before the list arrived
+      if (tvPop) tvSetPage(tvShows[tvChannel]);
+    });
+}
+
+function escapeHTML(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+function pctBox(r) {
+  return `left:${r.left*100}%; top:${r.top*100}%; width:${r.width*100}%; height:${r.height*100}%;`;
+}
+
+// A picture on a grey box: if the file isn't there yet, the picture removes itself and the grey box shows.
+function showImg(src, alt, cls) {
+  return `<div class="${cls} show-ph"><img src="${escapeHTML(src)}" alt="${escapeHTML(alt)}" draggable="false" onerror="this.remove()"></div>`;
+}
+
+// The network's logo file; if it's missing, its name is written out instead.
+function buildNetwork(id) {
+  const n = tvNetworks[id];
+  if (!id) return '';
+  return `<img class="net-logo" src="shows/_networks/${escapeHTML(id)}.webp" alt="${escapeHTML(n ? n.name : id)}" draggable="false"
+            onerror="this.hidden = true; this.nextElementSibling.hidden = false;">
+          <div hidden>${networkInType(n || { name: id })}</div>`;
+}
+
+// BBC channels get the three blocks over the channel name; anything else is plain type.
+function networkInType(n) {
+  const colour = n.colour || '#111';
+  const bbc = /^BBC\s+(.+)$/i.exec(n.name);
+  if (bbc) {
+    return `<div class="net-bbc" aria-label="${escapeHTML(n.name)}">
+      <div class="net-bbc-blocks">${'BBC'.split('').map(l => `<span style="background:${colour}">${l}</span>`).join('')}</div>
+      <div class="net-bbc-channel" style="color:${colour}">${escapeHTML(bbc[1])}</div>
+    </div>`;
+  }
+  return `<div class="net-plain" style="color:${colour}">${escapeHTML(n.name)}</div>`;
+}
+
+function buildShowPage(show) {
+  if (!show) return '<div class="tv-nosignal">No signal</div>';
+  const dir  = `shows/${show.id}/`;
+  const cast = [0, 1, 2].map(i => (show.cast || [])[i]);   // always three photos; the names are optional labels
+  return `
+  <div class="show-page">
+    ${showImg(dir + 'still.webp', show.title + ' — still', 'show-still')}
+    <p class="show-desc">${escapeHTML(show.description)}</p>
+    <div class="show-title" style="color:${show.titleColour || '#1f4e79'}">${escapeHTML(show.title)}</div>
+    <div class="show-bottom">
+      <div class="show-cast">${cast.map((name, i) => showImg(`${dir}cast-${i + 1}.webp`, name || 'Cast member', 'show-cast-member')).join('')}</div>
+      <div class="show-network">${buildNetwork(show.network)}</div>
+    </div>
+  </div>`;
+}
+
+// A burst of static while the channel changes; the new show appears halfway through.
+let tvStaticRun = 0;
+function changeChannel(step) {
+  if (!tvPop || tvPop.closing || !tvShows || !tvShows.length) return;   // with one show it just re-tunes to it
+  tvChannel = (tvChannel + step + tvShows.length) % tvShows.length;
+  const crt = tvPop.crt;
+  const run = ++tvStaticRun;
+  const DURATION = reduceMotion.matches ? 0 : 260;
+  let swapped = false;
+  const start = performance.now();
+  const frame = now => {
+    if (run !== tvStaticRun || !tvPop || tvPop.crt !== crt) return;
+    const t = DURATION ? (now - start) / DURATION : 1;
+    if (!swapped && t >= 0.45) { tvSetPage(tvShows[tvChannel]); swapped = true; }
+    if (t >= 1) { crt.setStatic(0); crt.draw(); return; }
+    crt.setStatic(t < 0.45 ? 0.55 + t : 1 - (t - 0.45) / 0.55 * 0.85);
+    crt.draw();
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+/* ---- The CRT picture ----
+   The show page is laid out in HTML (kept invisible, so the CSS still decides where everything goes),
+   copied into an image (paintPage), and drawn by WebGL bent like the curved glass of a CRT (makeCrt).
+   Drawing the bend ourselves keeps it smooth: the browser's own bend filter skips and doubles rows
+   of pixels, which made text and edges jagged. */
+
+const CURVE = 0.018;   // how far the middle of each edge is pulled in, as a share of half the screen (corners ≈ 2×)
+
+// Copies the laid-out page into a canvas (backgrounds, borders, shadows, pictures and text, each where
+// the CSS put it). scale = canvas pixels per CSS pixel.
+function paintPage(src, scale) {
+  const W = Math.round(src.offsetWidth * scale), H = Math.round(src.offsetHeight * scale);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0c0e0d';
+  ctx.fillRect(0, 0, W, H);
+  const page = src.firstElementChild;
+  if (!page || !src.offsetWidth) return c;
+
+  const base = src.getBoundingClientRect();
+  const k = base.width / src.offsetWidth;     // the TV may be mid-animation, i.e. scaled
+  const box = r => ({ x: (r.left - base.left) / k * scale, y: (r.top - base.top) / k * scale,
+                      w: r.width / k * scale, h: r.height / k * scale });
+  const px = v => (parseFloat(v) || 0) * scale;
+  const inset = (b, d) => ({ x: b.x + d, y: b.y + d, w: b.w - 2 * d, h: b.h - 2 * d });
+  const shape = (b, r) => { ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, Math.max(0, Math.min(r, b.w / 2, b.h / 2))); };
+  const seen = col => col && !/rgba\(.*,\s*0\)$/.test(col) && col !== 'transparent';
+  const range = document.createRange();
+
+  const drawImage = (img, b, fit) => {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const s = fit === 'contain' ? Math.min(b.w / iw, b.h / ih) : Math.max(b.w / iw, b.h / ih);
+    const dw = iw * s, dh = ih * s;
+    ctx.drawImage(img, b.x + (b.w - dw) / 2, b.y + (b.h - dh) / 2, dw, dh);
+  };
+
+  // Each word is drawn where the browser placed it, so line breaks and spacing match exactly.
+  const drawText = (node, cs) => {
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${px(cs.fontSize)}px ${cs.fontFamily}`;
+    ctx.fillStyle = cs.color;
+    ctx.letterSpacing = px(cs.letterSpacing) + 'px';
+    const ascent = ctx.measureText('Hg').fontBoundingBoxAscent;
+    const upper = cs.textTransform === 'uppercase';
+    const words = /\S+/g;
+    let m;
+    while ((m = words.exec(node.textContent))) {
+      range.setStart(node, m.index);
+      range.setEnd(node, m.index + m[0].length);
+      const r = range.getClientRects()[0];
+      if (!r) continue;
+      const b = box(r);
+      ctx.fillText(upper ? m[0].toUpperCase() : m[0], b.x, b.y + ascent);
+    }
+  };
+
+  const walk = el => {
+    if (el.offsetParent === null && el !== page) return;   // hidden, or inside something hidden
+    const cs = getComputedStyle(el);
+    const b = box(el.getBoundingClientRect());
+    const radius = px(cs.borderTopLeftRadius);
+    const bw = px(cs.borderTopWidth);
+    const shadow = cs.boxShadow !== 'none' && /(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px/.exec(cs.boxShadow);
+    if (shadow) {
+      ctx.save();
+      ctx.shadowColor = shadow[1];
+      ctx.shadowOffsetX = px(shadow[2]); ctx.shadowOffsetY = px(shadow[3]); ctx.shadowBlur = px(shadow[4]);
+      ctx.fillStyle = '#000';
+      shape(b, radius); ctx.fill();
+      ctx.restore();
+    }
+    if (bw > 0) { ctx.fillStyle = cs.borderTopColor; shape(b, radius); ctx.fill(); }
+    const inner = inset(b, bw);
+    if (seen(cs.backgroundColor)) { ctx.fillStyle = cs.backgroundColor; shape(inner, radius - bw); ctx.fill(); }
+    if (el.tagName === 'IMG') {
+      if (el.complete && el.naturalWidth) drawImage(el, inner, cs.objectFit);
+      return;
+    }
+    const clip = cs.overflow === 'hidden';
+    if (clip) { ctx.save(); shape(inner, radius - bw); ctx.clip(); }
+    for (const n of el.childNodes) {
+      if (n.nodeType === 3 && n.textContent.trim()) drawText(n, cs);
+      else if (n.nodeType === 1) walk(n);
+    }
+    if (clip) ctx.restore();
+  };
+  walk(page);
+  return c;
+}
+
+// Draws the page bent like curved glass. Each point on the screen shows the page at
+// p · (1 + CURVE·|p|²) (p measured from the centre, -1 to 1), so things bow outwards more the further
+// they are from the middle, and the corners curve away into black with soft, rounded edges.
+// Static (for changing channel) is mixed in here too, so it's bent with the picture.
+const CRT_FRAG = `
+precision mediump float;
+varying vec2 uv;
+uniform sampler2D page;
+uniform vec2 size;
+uniform float curve, radius, grain, staticAmt, seed;
+void main() {
+  vec2 p = uv * 2.0 - 1.0;
+  vec2 q = p * (1.0 + curve * dot(p, p));
+  vec2 halfSize = size * 0.5;
+  vec2 d = abs(q) * halfSize - (halfSize - radius);
+  float dist = length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+  float inside = 1.0 - smoothstep(-1.0, 1.0, dist);
+  vec3 col = texture2D(page, clamp(q * 0.5 + 0.5, 0.0, 1.0)).rgb;
+  float n = fract(sin(dot(floor(gl_FragCoord.xy / grain) + seed, vec2(12.9898, 78.233))) * 43758.5453);
+  col = mix(col, vec3(n), staticAmt);
+  gl_FragColor = vec4(mix(vec3(0.047, 0.055, 0.051), col, inside), 1.0);
+}`;
+const CRT_VERT = `
+attribute vec2 pos;
+varying vec2 uv;
+void main() {
+  uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5);
+  gl_Position = vec4(pos, 0.0, 1.0);
+}`;
+
+function makeCrt(canvas, screen) {
+  const scale = window.devicePixelRatio || 1;
+  const W = Math.round(screen.offsetWidth * scale), H = Math.round(screen.offsetHeight * scale);
+  canvas.width = W; canvas.height = H;
+  const gl = canvas.getContext('webgl', { alpha: false, antialias: false });
+  if (!gl) {   // no WebGL: show the page flat
+    const ctx = canvas.getContext('2d');
+    let page = null;
+    return { scale, setPage(p) { page = p; }, setStatic() {}, draw() { if (page) ctx.drawImage(page, 0, 0, W, H); }, destroy() {} };
+  }
+  const compile = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, CRT_VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, CRT_FRAG));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const posLoc = gl.getAttribLocation(prog, 'pos');
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+  gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const u = name => gl.getUniformLocation(prog, name);
+  gl.uniform2f(u('size'), W, H);
+  gl.uniform1f(u('curve'), CURVE);
+  gl.uniform1f(u('radius'), Math.min(W, H) * 0.045);   // corner rounding
+  gl.uniform1f(u('grain'), 2 * scale);                  // static speckle size
+  gl.uniform1f(u('staticAmt'), 0);
+  gl.viewport(0, 0, W, H);
+  return {
+    scale,
+    setPage(p) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p); },
+    setStatic(amount) { gl.uniform1f(u('staticAmt'), amount); gl.uniform1f(u('seed'), Math.random() * 1000); },
+    draw() { gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); },
+    destroy() { const ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); }
+  };
+}
+
+// Copies the current page into the TV's picture.
+function tvRender() {
+  if (!tvPop || !tvPop.crt) return;
+  tvPop.crt.setPage(paintPage(tvPop.pageSrc, tvPop.crt.scale));
+  tvPop.crt.draw();
+}
+// Puts a show on screen, and redraws as its pictures finish loading.
+function tvSetPage(show) {
+  if (!tvPop) return;
+  tvPop.pageSrc.innerHTML = buildShowPage(show);
+  tvRender();
+  tvPop.pageSrc.querySelectorAll('img').forEach(img => {
+    if (img.complete) return;
+    img.addEventListener('load', tvRender, { once: true });
+    img.addEventListener('error', () => setTimeout(tvRender), { once: true });
+  });
+}
+
+/* ---- Picture-button pop-up (the TV) ---- */
+
+let tvPop = null;   // { btnImg, to, startT, anims, closing, frame, backdrop, close }
+
+// The largest size that fits the window, centred.
+function tvFinalRect(aspect) {
+  const p = document.getElementById('page').getBoundingClientRect();
+  const w = Math.min(p.width * 0.92, p.height * 0.86 * aspect);
+  const h = w / aspect;
+  return { left: (p.width - w) / 2, top: (p.height - h) / 2, width: w, height: h };
+}
+
+function openTvPop(btnEl, b) {
+  if (tvPop && !tvPop.closing) return;
+  const pop    = document.getElementById('tv-pop');
+  const btnImg = btnEl.querySelector('img');
+
+  // Re-opening while it's still shrinking back: grow again from where it has got to.
+  if (tvPop && tvPop.closing) {
+    tvPop.closing = false;
+    pop.style.pointerEvents = '';
+    animateTv(tvPop, true);
+    return;
+  }
+
+  const from = btnImg.getBoundingClientRect();
+  const to   = tvFinalRect(from.width / from.height);
+  const sc   = b.screen;
+
+  // Same shadow as the button, scaled up so it matches at the start of the motion.
+  const z = to.width / from.width;
+  const shadow = `drop-shadow(${-5*z}px ${3*z}px ${4*z}px rgba(0,0,0,0.24)) drop-shadow(${-10*z}px ${10*z}px ${16*z}px rgba(0,0,0,0.24))`;
+
+  pop.innerHTML = `
+    <div class="tv-backdrop"></div>
+    <div class="tv-frame" style="left:${to.left}px; top:${to.top}px; width:${to.width}px;">
+      <img src="${b.img}" alt="" draggable="false" style="filter:${shadow}">
+      <div class="tv-screen" style="left:${sc.left*100}%; top:${sc.top*100}%; width:${sc.width*100}%; height:${sc.height*100}%;">
+        <div class="tv-black"></div>
+        <div class="tv-content">
+          <div class="tv-page-src"></div>
+          <canvas class="tv-gl" aria-hidden="true"></canvas>
+        </div>
+        <div class="tv-glass"></div>
+      </div>
+      ${b.prev ? `<button type="button" class="tv-ch" data-ch="-1" aria-label="Previous show" style="${pctBox(b.prev)}"></button>` : ''}
+      ${b.next ? `<button type="button" class="tv-ch" data-ch="1" aria-label="Next show" style="${pctBox(b.next)}"></button>` : ''}
+    </div>
+    <button type="button" class="tv-close">close ×</button>`;
+  pop.classList.add('open');
+  btnImg.style.visibility = 'hidden';
+
+  tvPop = { btnImg, to, startT: tvButtonTransform(btnImg, to), anims: [], powerAnims: [], closing: false,
+            frame: pop.querySelector('.tv-frame'), backdrop: pop.querySelector('.tv-backdrop'), close: pop.querySelector('.tv-close'),
+            content: pop.querySelector('.tv-content'), glass: pop.querySelector('.tv-glass'), black: pop.querySelector('.tv-black'),
+            pageSrc: pop.querySelector('.tv-page-src'),
+            crt: makeCrt(pop.querySelector('.tv-gl'), pop.querySelector('.tv-screen')) };
+  tvSetPage(tvShows && tvShows[tvChannel]);
+  animateTv(tvPop, true, true);
+}
+
+// Switching the picture on (a bright line that opens up) or off (it collapses to a line, then a dot).
+// Starts from whatever state the picture is in, so it can be interrupted.
+function tvPower(state, on, delay) {
+  const cs = getComputedStyle(state.content);
+  const now = { transform: cs.transform === 'none' ? 'scale(1, 1)' : cs.transform, opacity: +cs.opacity, filter: cs.filter === 'none' ? 'brightness(1)' : cs.filter };
+  const glassNow = +getComputedStyle(state.glass).opacity;
+  const blackNow = +getComputedStyle(state.black).opacity;
+  state.powerAnims.forEach(a => a.cancel());
+  if (reduceMotion.matches) {
+    state.content.style.opacity = state.glass.style.opacity = state.black.style.opacity = on ? '1' : '0';
+    state.powerAnims = [];
+    return;
+  }
+  const line = 'scale(1, 0.006)';
+  const frames = on
+    ? (now.opacity < 0.05
+        ? [{ transform: 'scale(0.9, 0.006)', opacity: 0, filter: 'brightness(3)' },
+           { transform: 'scale(0.9, 0.006)', opacity: 1, filter: 'brightness(3)', offset: 0.15 },
+           { transform: 'scale(1, 1)', opacity: 1, filter: 'brightness(1.5)', offset: 0.6, easing: 'ease-out' },
+           { transform: 'scale(1, 1)', opacity: 1, filter: 'brightness(1)' }]
+        : [now, { transform: 'scale(1, 1)', opacity: 1, filter: 'brightness(1)' }])
+    : [now,
+       { transform: line, opacity: 1, filter: 'brightness(3)', offset: 0.55, easing: 'ease-in' },
+       { transform: 'scale(0, 0.006)', opacity: 0, filter: 'brightness(3)' }];
+  const d = on ? 460 : 260;
+  state.powerAnims = [
+    state.content.animate(frames, { duration: d, delay: delay || 0, fill: 'both', easing: on ? 'ease-out' : 'linear' }),
+    state.glass.animate([{ opacity: glassNow }, { opacity: on ? 1 : 0 }],
+      { duration: on ? d * 0.6 : d * 0.5, delay: delay || 0, fill: 'both' }),
+    // The dead grey glass of the photo goes dark as the picture comes on (and back to grey when it's off),
+    // so the curved-away corners read as black screen.
+    state.black.animate(on
+      ? [{ opacity: blackNow }, { opacity: 1, offset: 0.15 }, { opacity: 1 }]
+      : [{ opacity: blackNow }, { opacity: blackNow, offset: 0.7 }, { opacity: 0 }],
+      { duration: d, delay: delay || 0, fill: 'both' })
+  ];
+}
+
+// The transform that shrinks the big TV down onto its button.
+function tvButtonTransform(btnImg, to) {
+  const p = document.getElementById('page').getBoundingClientRect();
+  const r = btnImg.getBoundingClientRect();
+  return `translate(${r.left - p.left - to.left}px, ${r.top - p.top - to.top}px) scale(${r.width / to.width})`;
+}
+
+// Grows (open) or shrinks (close) from wherever the TV currently is.
+function animateTv(state, open, fresh) {
+  const cur = el => getComputedStyle(el);
+  const fromT  = fresh ? state.startT : cur(state.frame).transform;
+  const fromBd = fresh ? 0 : +cur(state.backdrop).opacity;
+  const fromCl = fresh ? 0 : +cur(state.close).opacity;
+  state.anims.forEach(a => a.cancel());
+  const quick = reduceMotion.matches;
+  const d = quick ? 0 : (open ? 560 : 420);
+  state.anims = [
+    state.frame.animate([{ transform: fromT }, { transform: open ? 'none' : state.startT }],
+      { duration: d, easing: open ? 'cubic-bezier(0.22, 1, 0.36, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' }),
+    state.backdrop.animate([{ opacity: fromBd }, { opacity: open ? 1 : 0 }],
+      { duration: open ? d * 0.65 : d, easing: 'ease-out', fill: 'forwards' }),
+    state.close.animate(open
+      ? [{ opacity: fromCl }, { opacity: fromCl, offset: 0.6 }, { opacity: 1 }]
+      : [{ opacity: fromCl }, { opacity: 0, offset: 0.3 }, { opacity: 0 }], { duration: d, fill: 'forwards' })
+  ];
+  // The picture comes on as the TV settles into place, and goes off as it starts to shrink.
+  tvPower(state, open, open && fresh && !quick ? 380 : 0);
+}
+
+function closeTvPop() {
+  if (!tvPop || tvPop.closing) return;
+  const state = tvPop;
+  state.closing = true;
+  const pop = document.getElementById('tv-pop');
+  pop.style.pointerEvents = 'none';
+  state.startT = tvButtonTransform(state.btnImg, state.to);   // the button may have settled since it was clicked
+  animateTv(state, false);
+  state.anims[0].finished.then(() => {
+    if (tvPop !== state || !state.closing) return;   // re-opened part-way
+    pop.classList.remove('open');
+    pop.style.pointerEvents = '';
+    state.crt.destroy();   // frees the graphics context (browsers only allow a few at once)
+    pop.innerHTML = '';
+    state.btnImg.style.visibility = '';
+    tvPop = null;
+  }).catch(() => {});
+}
+
 function buildCards(s, catKey) {
+  if (!catKey && s.buttons) return buildImageButtons(s);
   const examples = s.examples[catKey] || [];
   if (!examples.length) return '<div class="coming-soon">Coming Soon</div>';
   return examples.map((ex, i) => `
@@ -1048,6 +1764,13 @@ function onOverlayClick(e) {
   const tab  = e.target.closest('.subj-tab');
 
   if (back) { closeSubject(); return; }
+
+  const imgBtn = e.target.closest('.img-btn');
+  if (imgBtn) {
+    const b = subjects[currentSubjId].buttons.find(x => x.id === imgBtn.dataset.btn);
+    if (b && b.screen) openTvPop(imgBtn, b);
+    return;
+  }
 
   const card = e.target.closest('.card--open');
   if (card) {
@@ -1282,7 +2005,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // a box is clicked rather than loading during the opening animation.
   window.addEventListener('load', () => {
     Object.values(subjects).forEach(s => {
-      Object.values(s.catBackgrounds || {}).forEach(b => { new Image().src = b.src; });
+      Object.values(s.catBackgrounds || {}).forEach(b => { if (b.src) new Image().src = b.src; });
     });
   });
 
@@ -1291,9 +2014,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === pop || e.target.closest('[data-action="cmp-close"]')) closeCompare();
   });
 
+  loadShows();
+  document.fonts.ready.then(tvRender);   // redraw the TV if it opened before the fonts arrived
+
+  // Clicking outside the TV, or "close", shrinks it back into its button. Channels 1 / 12 change show.
+  document.getElementById('tv-pop').addEventListener('click', e => {
+    const ch = e.target.closest('.tv-ch');
+    if (ch) { changeChannel(+ch.dataset.ch); return; }
+    if (!e.target.closest('.tv-frame') || e.target.closest('.tv-close')) closeTvPop();
+  });
+
   document.addEventListener('keydown', e => {
+    if (tvPop && !tvPop.closing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      changeChannel(e.key === 'ArrowRight' ? 1 : -1);
+      return;
+    }
     if (e.key !== 'Escape') return;
-    if (pop.classList.contains('open')) closeCompare();
+    if (tvPop) closeTvPop();
+    else if (pop.classList.contains('open')) closeCompare();
     else if (currentSubjId) closeSubject();
   });
 });

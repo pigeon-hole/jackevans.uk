@@ -1,0 +1,25 @@
+{
+  "_template": {
+    "id": "folder-name-in-shows",
+    "title": "Show Title",
+    "titleColour": "#1f4e79",
+    "description": "One or two sentences about the series.",
+    "cast": ["Cast member 1", "Cast member 2", "Cast member 3"],
+    "network": "network-file-name"
+  },
+
+  "networks": {
+    "bbc-four": { "name": "BBC Four", "colour": "#7b3fe4" }
+  },
+
+  "shows": [
+    {
+      "id": "getting-on",
+      "title": "Getting On",
+      "titleColour": "#1f4e79",
+      "description": "Darkly comic series about life on a hospital ward, starring Jo Brand as part of a nursing team who have to get on with the job despite challenges thrown up by the modern NHS.",
+      "cast": ["Joanna Scanlan", "Jo Brand", "Vicki Pepperdine"],
+      "network": "bbc-four"
+    }
+  ]
+}
