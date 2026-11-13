@@ -14,9 +14,10 @@
   --yellow: #FFE000;
   --ink:    #111111;
   --muted:  #666;
-  --green:  #00B84C;
-  --red:    #E8001A;
-  --blue:   #0038FF;
+  /* Shown only for a moment while a photo loads, so they sit close to the photos' own tones. */
+  --geo-bg:     #8C7F68;
+  --tech-bg:    #14201A;
+  --culture-bg: #24201D;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -149,7 +150,7 @@ body {
   background:
     linear-gradient(rgba(35,22,8,0.45), rgba(35,22,8,0.45)),
     url(images/geography-world-map.jpg) center / cover,
-    var(--green);
+    var(--geo-bg);
   color: white;
 }
 .box--yellow .box-kicker   { color: rgba(255,255,255,0.6); }
@@ -160,7 +161,7 @@ body {
   background:
     linear-gradient(rgba(8,16,10,0.5), rgba(8,16,10,0.5)),
     url(images/technology-board.jpg) center bottom / cover,
-    var(--red);
+    var(--tech-bg);
   color: white;
 }
 .box--red .box-kicker      { color: rgba(255,255,255,0.5); }
@@ -171,7 +172,7 @@ body {
   background:
     linear-gradient(rgba(10,10,10,0.5), rgba(10,10,10,0.5)),
     url(images/culture.jpg) center / cover,
-    var(--blue);
+    var(--culture-bg);
   color: white;
 }
 .box--blue .box-kicker     { color: rgba(255,255,255,0.5); }
@@ -744,7 +745,7 @@ const subjects = {
     kicker: '',
     colorClass: 'box--yellow',
     hdrClass: 'hdr--yellow',
-    bgColor: '#00B84C',
+    bgColor: '#8C7F68',
     bgImage: 'images/geography-world-map.jpg',
     bgWash: 'rgba(240,226,192,0.35)',
     // Header picture per tab; tabs not listed show the subject's own (the map).
@@ -816,7 +817,7 @@ const subjects = {
     kicker: '',
     colorClass: 'box--red',
     hdrClass: 'hdr--red',
-    bgColor: '#E8001A',
+    bgColor: '#14201A',
     bgImage: 'images/technology-board.jpg',
     bgWash: 'rgba(8,16,10,0.5)',
     bgPosition: 'center bottom',
@@ -833,7 +834,7 @@ subjects.culture = {
   kicker: '',
   colorClass: 'box--blue',
   hdrClass: 'hdr--blue',
-  bgColor: '#0038FF',
+  bgColor: '#24201D',
   bgImage: 'images/culture.jpg',
   bgWash: 'rgba(10,10,10,0.5)',
   desc: '',
@@ -1436,6 +1437,14 @@ function getBoxPos(boxEl) {
 document.addEventListener('DOMContentLoaded', () => {
   renderHome();
   window.addEventListener('resize', sizeSubjectHeader);
+
+  // Fetch the tab header photos as soon as the home page is in, so they're ready before
+  // a box is clicked rather than loading during the opening animation.
+  window.addEventListener('load', () => {
+    Object.values(subjects).forEach(s => {
+      Object.values(s.catBackgrounds || {}).forEach(b => { new Image().src = b.src; });
+    });
+  });
 
   const pop = document.getElementById('cmp-pop');
   pop.addEventListener('click', e => {
