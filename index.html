@@ -81,19 +81,31 @@ body {
   transition: filter 0.15s;
 }
 .subj-box:hover { filter: brightness(0.96); }
-.subj-box--clone {
+/* Opening/closing: a copy of the box (picture band over paper) changes size between the
+   home box and the subject page, and the title flies between its two positions. */
+.box-clone {
   position: absolute;
   z-index: 19;
-  flex: none;
-  margin: 0;
-  border-top: 0 !important;
+  overflow: hidden;
   pointer-events: none;
-}
-.clone-skeleton {
-  position: absolute;
-  inset: 0;
   background: var(--paper);
-  opacity: 0;
+}
+.clone-band {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.clone-band > * { position: absolute; inset: 0; }
+.clone-home { border-top: 0 !important; cursor: default; transition: none; }
+.clone-home .box-title { visibility: hidden; }
+.title-fly {
+  position: absolute;
+  z-index: 21;
+  margin: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  will-change: transform;
 }
 .subj-box + .subj-box { border-top: 4px solid var(--yellow); }
 
@@ -886,29 +898,114 @@ function rectFrame(r) {
   return { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' };
 }
 
-// The copy carries a blank version of the subject page (header picture at its real height,
-// paper below). Fading that in while the box grows means the final hand-over to the real
-// page only adds the text and cards.
-function makeBoxClone(boxEl, rect, s, cat, hdrH) {
+let titleFly = null;
+
+function pageOffset() {
+  return document.getElementById('page').getBoundingClientRect();
+}
+// Where an element's text is drawn (page-relative), transforms included.
+function textRect(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const b = range.getBoundingClientRect(), p = pageOffset();
+  return { left: b.left - p.left, top: b.top - p.top, width: b.width, height: b.height };
+}
+// Font size and letter-spacing as they look on screen (a transform's scale included).
+function titleState(el) {
+  const cs = getComputedStyle(el);
+  const k  = cs.transform && cs.transform !== 'none' ? new DOMMatrix(cs.transform).a : 1;
+  return { r: textRect(el), fs: parseFloat(cs.fontSize) * k, ls: (parseFloat(cs.letterSpacing) || 0) * k, color: cs.color };
+}
+
+// The copy is a picture band over paper. The band holds the home box's picture with the
+// page's header picture on top: the band shrinks or grows to the header's height while the
+// two pictures cross-fade directly into each other.
+function makeBoxClone(boxEl, s, cat) {
   removeBoxClone();
-  const c = boxEl.cloneNode(true);
-  c.removeAttribute('data-subject');
-  c.classList.add('subj-box--clone');
-  Object.assign(c.style, rectFrame(rect));
-  const sk = document.createElement('div');
-  sk.className = 'clone-skeleton';
-  sk.innerHTML = `<div class="clone-skeleton-hdr" style="height:${hdrH}px; background:${headerBg(s, cat)}; filter:${headerFilter(s, cat)};"></div>`;
-  c.appendChild(sk);
+  const c = document.createElement('div');
+  c.className = 'box-clone';
+  c.innerHTML = `<div class="clone-band"><div class="clone-hdr" style="background:${headerBg(s, cat)}; filter:${headerFilter(s, cat)};"></div></div>`;
+  const home = boxEl.cloneNode(true);
+  home.removeAttribute('data-subject');
+  home.classList.add('clone-home');
+  c.firstChild.prepend(home);
   document.getElementById('page').appendChild(c);
   boxClone = c;
   return c;
 }
+
+// A copy of the page title, laid out exactly where the real one sits (base), then moved and
+// scaled with a transform so it can sit over the home box's title too.
+function makeTitleFly(s, base) {
+  const t = document.createElement('div');
+  t.className = 'subj-name title-fly';
+  t.textContent = s.label;
+  t.style.left = '0px';
+  t.style.top  = '0px';
+  document.getElementById('page').appendChild(t);
+  const m = textRect(t), p = pageOffset(), e = t.getBoundingClientRect();
+  t.style.left = (base.left - m.left) + 'px';
+  t.style.top  = (base.top  - m.top)  + 'px';
+  t.style.transformOrigin = `${m.left - (e.left - p.left)}px ${m.top - (e.top - p.top)}px`;
+  t._base = base;
+  titleFly = t;
+  return t;
+}
+function flyFrame(title) {
+  const base = titleFly._base;
+  const k = title.fs / parseFloat(getComputedStyle(titleFly).fontSize);
+  return {
+    transform: `translate(${title.r.left - base.left}px, ${title.r.top - base.top}px) scale(${k})`,
+    letterSpacing: (title.ls / k) + 'px',
+    color: title.color
+  };
+}
+
+// The two ends of the transition, and wherever a running one has got to.
+function homeState(boxEl) {
+  const r = boxRect(boxEl);
+  return { rect: r, band: r.height, hdr: 0, foot: 1, title: titleState(boxEl.querySelector('.box-title')) };
+}
+function pageState() {
+  return { rect: fullRect(), band: subjectHeaderHeight(), hdr: 1, foot: 0,
+           title: titleState(document.querySelector('#subj-overlay .subj-name')) };
+}
+function liveState() {
+  if (!boxClone || !titleFly) return null;
+  const p = pageOffset(), c = boxClone.getBoundingClientRect();
+  return {
+    rect: { top: c.top - p.top, left: c.left - p.left, width: c.width, height: c.height },
+    band: boxClone.querySelector('.clone-band').getBoundingClientRect().height,
+    hdr:  +getComputedStyle(boxClone.querySelector('.clone-hdr')).opacity,
+    foot: +getComputedStyle(boxClone.querySelector('.box-footer')).opacity,
+    title: titleState(titleFly)
+  };
+}
+
+function animateClone(from, to, duration, easing) {
+  const opts = { duration, easing, fill: 'forwards' };
+  const fade = { duration, fill: 'forwards' };
+  const growing = to.hdr > from.hdr;
+  return [
+    boxClone.animate([rectFrame(from.rect), rectFrame(to.rect)], opts),
+    boxClone.querySelector('.clone-band').animate([{ height: from.band + 'px' }, { height: to.band + 'px' }], opts),
+    boxClone.querySelector('.clone-hdr').animate(growing
+      ? [{ opacity: from.hdr }, { opacity: from.hdr, offset: 0.04 }, { opacity: to.hdr, offset: 0.6 }, { opacity: to.hdr }]
+      : [{ opacity: from.hdr }, { opacity: from.hdr, offset: 0.15 }, { opacity: to.hdr, offset: 0.85 }, { opacity: to.hdr }], fade),
+    boxClone.querySelector('.box-footer').animate(growing
+      ? [{ opacity: from.foot }, { opacity: to.foot, offset: 0.2 }, { opacity: to.foot }]
+      : [{ opacity: from.foot }, { opacity: from.foot, offset: 0.75 }, { opacity: to.foot }], fade),
+    titleFly.animate([flyFrame(from.title), flyFrame(to.title)], opts)
+  ];
+}
+
 function subjectHeaderHeight() {
   const hdr = document.querySelector('#subj-overlay .subj-hdr');
   return hdr ? hdr.getBoundingClientRect().height : 0;
 }
 function removeBoxClone() {
   if (boxClone) { boxClone.remove(); boxClone = null; }
+  if (titleFly) { titleFly.remove(); titleFly = null; }
 }
 
 // The header is 50% taller than its content needs; its natural height varies with screen width.
@@ -926,6 +1023,8 @@ function stopOverlayAnims() {
 
 function openSubject(subjId, boxEl) {
   const token = ++animToken;
+  // Re-opening while the close is still running carries on from where it has got to.
+  const live = currentSubjId === subjId ? liveState() : null;
   currentSubjId = subjId;
   isSubjectOpen = true;
   const s = subjects[subjId];
@@ -937,18 +1036,19 @@ function openSubject(subjId, boxEl) {
   overlay.innerHTML = buildSubjectHTML(s, currentCat);
   sizeSubjectHeader();
   overlay.addEventListener('click', onOverlayClick);
+  const name = overlay.querySelector('.subj-name');
+  name.style.visibility = 'hidden';
 
   const quick = reduceMotion.matches;
-  const from  = boxRect(boxEl);
-  const clone = makeBoxClone(boxEl, from, s, currentCat, subjectHeaderHeight());
-  const grow  = clone.animate([rectFrame(from), rectFrame(fullRect())],
-    { duration: quick ? 0 : EXPAND_MS, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
-  const morph = clone.querySelector('.clone-skeleton').animate([
-    { opacity: 0 }, { opacity: 0, offset: 0.08 }, { opacity: 1, offset: 0.6 }, { opacity: 1 }
-  ], { duration: quick ? 0 : EXPAND_MS, fill: 'forwards' });
-  overlayAnims = [grow, morph];
+  const to    = pageState();
+  const from  = live || homeState(boxEl);
+  makeBoxClone(boxEl, s, currentCat);
+  makeTitleFly(s, to.title.r);
+  overlayAnims = animateClone(from, to, quick ? 0 : EXPAND_MS, 'cubic-bezier(0.22, 1, 0.36, 1)');
 
-  grow.finished.then(() => {
+  // By now the copy looks exactly like the empty page, so fading the page in only adds
+  // the back link, tabs and cards. The flying title stays on top until it's done.
+  overlayAnims[0].finished.then(() => {
     if (token !== animToken) return;
     overlay.style.pointerEvents = '';
     const fade = overlay.animate([{ opacity: 0 }, { opacity: 1 }],
@@ -958,6 +1058,7 @@ function openSubject(subjId, boxEl) {
   }).then(() => {
     if (token !== animToken) return;
     overlay.style.opacity = '1';
+    name.style.visibility = '';
     stopOverlayAnims();
     removeBoxClone();
   }).catch(() => {});
@@ -1110,38 +1211,29 @@ function closeSubject() {
   overlay.style.pointerEvents = 'none';
 
   // If the open sequence is still running, carry on from wherever it has got to.
-  const pageR = document.getElementById('page').getBoundingClientRect();
-  let start = fullRect();
-  let startMorph = 1;
-  if (boxClone) {
-    const c = boxClone.getBoundingClientRect();
-    start = { top: c.top - pageR.top, left: c.left - pageR.left, width: c.width, height: c.height };
-    startMorph = +getComputedStyle(boxClone.querySelector('.clone-skeleton')).opacity;
-  }
+  const s     = subjects[currentSubjId];
+  const live  = liveState();
+  const page  = pageState();
+  const from  = live || page;
   const startOpacity = getComputedStyle(overlay).opacity;
-  const hdrH = subjectHeaderHeight();
   stopOverlayAnims();
   overlay.style.opacity = startOpacity;
-  const clone = makeBoxClone(boxEl, start, subjects[currentSubjId], currentCat, hdrH);
-  const skeleton = clone.querySelector('.clone-skeleton');
-  skeleton.style.opacity = startMorph;
+  overlay.querySelector('.subj-name').style.visibility = 'hidden';
+  makeBoxClone(boxEl, s, currentCat);
+  makeTitleFly(s, page.title.r);
+  const hold = animateClone(from, from, 0, 'linear');   // copy and title sit still under the fading page
 
   const quick = reduceMotion.matches;
   const fade = overlay.animate([{ opacity: startOpacity }, { opacity: 0 }],
     { duration: quick ? 0 : FADE_MS, easing: 'ease-in', fill: 'forwards' });
-  overlayAnims = [fade];
+  overlayAnims = [...hold, fade];
 
   fade.finished.then(() => {
     if (token !== animToken) return;
     overlay.style.display = 'none';
-    const duration = quick ? 0 : SHRINK_MS;
-    const shrink = clone.animate([rectFrame(start), rectFrame(boxRect(boxEl))],
-      { duration, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
-    const unmorph = skeleton.animate([
-      { opacity: startMorph }, { opacity: 0, offset: 0.6 }, { opacity: 0 }
-    ], { duration, fill: 'forwards' });
-    overlayAnims.push(shrink, unmorph);
-    return shrink.finished;
+    const shrink = animateClone(from, homeState(boxEl), quick ? 0 : SHRINK_MS, 'cubic-bezier(0.4, 0, 0.2, 1)');
+    overlayAnims.push(...shrink);
+    return shrink[0].finished;
   }).then(() => {
     if (token !== animToken) return;
     stopOverlayAnims();
