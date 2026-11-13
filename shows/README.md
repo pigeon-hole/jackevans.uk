@@ -9,8 +9,11 @@ The TV's pages come from `shows.json` (in the site's top folder) plus the pictur
    - `cast` is the three names, in the same order as the photos.
    - `network` is the network's logo file name (without `.webp`), and must also be listed under `networks`.
 2. Make a folder here named after the `id`, containing:
-   - `still.webp` — a screenshot from the series (16:9 works best)
-   - `cast-1.webp`, `cast-2.webp`, `cast-3.webp` — the cast photos (portrait, roughly 4:5)
+   - `still.webp` — a screenshot from the series (16:9 works best), top-left
+   - `poster.webp` — the show's poster (portrait, about 2:3), top-right
+   - `cast-1.webp`, `cast-2.webp`, `cast-3.webp` — the cast photos (portrait, roughly 4:5), left to right
+
+The `description` isn't shown on the TV, but screen readers read it out.
 
 ## Adding a network
 

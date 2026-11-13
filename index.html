@@ -492,8 +492,8 @@ body {
   grid-template-columns: 62% 1fr;
   grid-template-rows: auto auto 1fr;
   grid-template-areas:
-    "still desc"
-    "title  ."
+    "still poster"
+    "title poster"
     "bottom bottom";
   column-gap: 4cqw;
 }
@@ -501,18 +501,38 @@ body {
   grid-area: still;
   aspect-ratio: 16 / 9;
   width: 100%;
-  /* Rounded, with a thin dark bezel and a soft shadow to set it apart from the page. */
+}
+/* Screenshot and poster: rounded, with a thin dark bezel and a soft shadow to set them apart from the page. */
+.show-still, .show-poster {
   border-radius: 1.4cqw;
   overflow: hidden;
   border: 0.45cqw solid #2b2a28;
   box-shadow: 0 0.4cqw 1.2cqw rgba(0,0,0,0.22);
 }
+/* The poster runs from the top of the screenshot down beside the title, stopping just above the cast,
+   in its own shape (about 2:3), centred in the space. Square corners, unlike the screenshot.
+   It's positioned inside an empty area so it can't make the rows any taller. */
+.show-poster-area {
+  grid-area: poster;
+  position: relative;
+}
+.show-poster {
+  position: absolute;
+  top: 0;
+  bottom: 2.4cqh;
+  left: 50%;
+  aspect-ratio: 2 / 3;
+  transform: translateX(-50%);
+  border-radius: 0;
+}
+/* The description isn't shown, but screen readers still read it out. */
 .show-desc {
-  grid-area: desc;
-  font-family: 'Barlow', Arial, sans-serif;
-  font-size: 2.9cqw;
-  line-height: 1.35;
-  color: #222;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .show-title {
   grid-area: title;
@@ -1388,6 +1408,7 @@ function buildShowPage(show) {
   return `
   <div class="show-page">
     ${showImg(dir + 'still.webp', show.title + ' — still', 'show-still')}
+    <div class="show-poster-area">${showImg(dir + 'poster.webp', show.title + ' — poster', 'show-poster')}</div>
     <p class="show-desc">${escapeHTML(show.description)}</p>
     <div class="show-title" style="color:${show.titleColour || '#1f4e79'}">${escapeHTML(show.title)}</div>
     <div class="show-bottom">
@@ -1439,10 +1460,13 @@ function paintPage(src, scale) {
   const page = src.firstElementChild;
   if (!page || !src.offsetWidth) return c;
 
+  // The TV may be mid-animation (growing, i.e. scaled), so on-screen positions are converted back to
+  // the page's own size. The page sits outside the part squashed by the switch-on effect; reading it
+  // while squashed is what crammed everything into the top of the screen on a first visit.
   const base = src.getBoundingClientRect();
-  const k = base.width / src.offsetWidth;     // the TV may be mid-animation, i.e. scaled
-  const box = r => ({ x: (r.left - base.left) / k * scale, y: (r.top - base.top) / k * scale,
-                      w: r.width / k * scale, h: r.height / k * scale });
+  const kx = base.width / src.offsetWidth, ky = base.height / src.offsetHeight;
+  const box = r => ({ x: (r.left - base.left) / kx * scale, y: (r.top - base.top) / ky * scale,
+                      w: r.width / kx * scale, h: r.height / ky * scale });
   const px = v => (parseFloat(v) || 0) * scale;
   const inset = (b, d) => ({ x: b.x + d, y: b.y + d, w: b.w - 2 * d, h: b.h - 2 * d });
   const shape = (b, r) => { ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, Math.max(0, Math.min(r, b.w / 2, b.h / 2))); };
@@ -1477,6 +1501,7 @@ function paintPage(src, scale) {
 
   const walk = el => {
     if (el.offsetParent === null && el !== page) return;   // hidden, or inside something hidden
+    if (el.classList.contains('show-desc')) return;         // only there for screen readers
     const cs = getComputedStyle(el);
     const b = box(el.getBoundingClientRect());
     const radius = px(cs.borderTopLeftRadius);
@@ -1637,9 +1662,9 @@ function openTvPop(btnEl, b) {
     <div class="tv-frame" style="left:${to.left}px; top:${to.top}px; width:${to.width}px;">
       <img src="${b.img}" alt="" draggable="false" style="filter:${shadow}">
       <div class="tv-screen" style="left:${sc.left*100}%; top:${sc.top*100}%; width:${sc.width*100}%; height:${sc.height*100}%;">
+        <div class="tv-page-src"></div>
         <div class="tv-black"></div>
         <div class="tv-content">
-          <div class="tv-page-src"></div>
           <canvas class="tv-gl" aria-hidden="true"></canvas>
         </div>
         <div class="tv-glass"></div>
