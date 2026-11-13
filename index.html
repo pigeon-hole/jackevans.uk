@@ -506,31 +506,6 @@ body {
   pointer-events: none;
 }
 
-.cmp-ph { position: relative; width: 100%; height: 100%; }
-.cmp-ph--before {
-  background-color: #AEB89A;
-  background-image:
-    linear-gradient(rgba(17,17,17,0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(17,17,17,0.12) 1px, transparent 1px);
-  background-size: 38px 38px;
-}
-.cmp-ph--after {
-  background-color: #9C948A;
-  background-image: repeating-linear-gradient(45deg, rgba(17,17,17,0.1) 0 2px, transparent 2px 14px);
-}
-.cmp-ph span {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 8.5px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(17,17,17,0.55);
-}
-.cmp-ph span:first-child { left: 25%; }
-.cmp-ph span:last-child  { left: 75%; }
-
 .cmp-tag {
   position: absolute;
   top: 12px;
@@ -623,78 +598,9 @@ body {
   color: var(--muted);
 }
 
-/* ---- COLLECTIONS ---- */
-.collection-bar {
-  grid-column: 1 / -1;
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 24px;
-  padding: 24px 28px;
-  border: 0;
-  background: var(--ink);
-  color: white;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.collection-bar:hover { background: #2c2c2c; }
-.collection-bar:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
-
-.collection-title {
-  font-family: 'Barlow Condensed', Impact, sans-serif;
-  font-weight: 900;
-  font-size: clamp(34px, 4.5vw, 64px);
-  line-height: 0.9;
-  letter-spacing: -0.5px;
-  text-transform: uppercase;
-}
-
-.collection-meta {
-  font-size: 12px;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.65);
-}
-
-.cmp-panel--collection { height: calc(100% - 48px); }
-
-.cmp-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 24px 20px 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
-}
-
-.cmp-stage.cmp-stage--item {
-  width: 100%;
-  height: clamp(220px, 56vw, 62vh);
-  flex-shrink: 0;
-  touch-action: pan-y; /* let a vertical swipe scroll the list on phones */
-}
-
-.cmp-item-title {
-  font-family: 'Barlow Condensed', Impact, sans-serif;
-  font-weight: 700;
-  font-size: 26px;
-  text-transform: uppercase;
-  color: var(--ink);
-  margin-top: 12px;
-}
-.cmp-item .cmp-desc { margin-top: 4px; }
-
 /* ---- PHONES ---- */
 @media (max-width: 640px) {
-  .collection-bar    { padding: 18px 16px; }
-  .collection-meta   { font-size: 10px; letter-spacing: 1.5px; }
-  .cmp-list          { padding: 16px 16px 24px; gap: 28px; }
-  .mast              { padding: 16px 16px 10px; }
+  .mast             { padding: 16px 16px 10px; }
   .subj-box          { padding-left: 16px; padding-right: 16px; }
   .box-kicker        { letter-spacing: 2px; }
   .box-cats          { letter-spacing: 1.5px; }
@@ -796,19 +702,6 @@ const subjects = {
           } },
       ],
       nature: []
-    },
-    // Shown as a bar above a category's cards; opens a scrolling list of static before/after sliders.
-    // An empty src shows a placeholder until the image is added.
-    collections: {
-      destruction: {
-        title: 'Gaza Collective',
-        items: [
-          { title: 'Location 1', desc: '', before: { label: 'Before', src: '' }, after: { label: 'After', src: '' } },
-          { title: 'Location 2', desc: '', before: { label: 'Before', src: '' }, after: { label: 'After', src: '' } },
-          { title: 'Location 3', desc: '', before: { label: 'Before', src: '' }, after: { label: 'After', src: '' } },
-          { title: 'Location 4', desc: '', before: { label: 'Before', src: '' }, after: { label: 'After', src: '' } }
-        ]
-      }
     }
   },
   technology: {
@@ -1138,19 +1031,10 @@ function buildCardImage(ex) {
   return `<div class="card-img">[ ${ex.title} ]${tag}</div>`;
 }
 
-function buildCollectionBar(col) {
-  return `
-  <button type="button" class="collection-bar">
-    <span class="collection-title">${col.title}</span>
-    <span class="collection-meta">${col.items.length} before / after comparisons →</span>
-  </button>`;
-}
-
 function buildCards(s, catKey) {
   const examples = s.examples[catKey] || [];
   if (!examples.length) return '<div class="coming-soon">Coming Soon</div>';
-  const col = s.collections && s.collections[catKey];
-  return (col ? buildCollectionBar(col) : '') + examples.map((ex, i) => `
+  return examples.map((ex, i) => `
   <div class="card ${ex.compare ? 'card--open' : ''}" data-idx="${i}">
     ${buildCardImage(ex)}
     <div class="card-title">${ex.title}</div>
@@ -1164,11 +1048,6 @@ function onOverlayClick(e) {
   const tab  = e.target.closest('.subj-tab');
 
   if (back) { closeSubject(); return; }
-
-  if (e.target.closest('.collection-bar')) {
-    openCollection(subjects[currentSubjId].collections[currentCat]);
-    return;
-  }
 
   const card = e.target.closest('.card--open');
   if (card) {
@@ -1247,9 +1126,7 @@ function closeSubject() {
 /* ===================== BEFORE / AFTER POP-UP ===================== */
 
 function buildCompareLayer(side, img, focus) {
-  const inner = img.src
-    ? `<img src="${img.src}" alt="${img.label}" draggable="false" style="object-position:${focus || '50% 50%'};">`
-    : `<div class="cmp-ph cmp-ph--${side}"><span>[ ${side} image ]</span><span>[ ${side} image ]</span></div>`;
+  const inner = `<img src="${img.src}" alt="${img.label}" draggable="false" style="object-position:${focus || '50% 50%'};">`;
   return `<div class="cmp-layer cmp-layer--${side}">${inner}<div class="cmp-tag cmp-tag--${side}">${img.label}</div></div>`;
 }
 
@@ -1341,43 +1218,6 @@ function openCompare(ex) {
   if (c.map) initCompareBar(stage, bar, initCompareMap(c));
   else       initCompareBar(stage, stage, null);
 
-  pop.classList.add('open');
-}
-
-function openCollection(col) {
-  const s   = subjects[currentSubjId];
-  const pop = document.getElementById('cmp-pop');
-
-  destroyCompareMap();
-
-  const items = col.items.map(it => `
-    <section class="cmp-item">
-      <div class="cmp-stage cmp-stage--item">
-        ${buildCompareLayer('after', it.after, it.focus)}${buildCompareLayer('before', it.before, it.focus)}
-        <div class="cmp-bar" tabindex="0" role="slider" aria-label="Before and after divider: ${it.title}"
-             aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><div class="cmp-knob">◂ ▸</div></div>
-      </div>
-      <div class="cmp-item-title">${it.title}</div>
-      ${it.desc ? `<p class="cmp-desc">${it.desc}</p>` : ''}
-    </section>`).join('');
-
-  pop.innerHTML = `
-  <div class="cmp-panel cmp-panel--collection">
-    <div class="cmp-head">
-      <div>
-        <div class="cmp-kicker">${s.label} · ${currentCat}</div>
-        <div class="cmp-title">${col.title}</div>
-      </div>
-      <div class="cmp-close" data-action="cmp-close">close ×</div>
-    </div>
-    <div class="cmp-list">${items}</div>
-    <div class="cmp-foot">
-      <div class="cmp-meta"><span>${col.items.length} comparisons</span><span>drag each bar to compare</span></div>
-    </div>
-  </div>`;
-
-  pop.querySelectorAll('.cmp-stage--item').forEach(st => initCompareBar(st, st, null));
-  pop.querySelector('.cmp-list').scrollTop = 0;
   pop.classList.add('open');
 }
 
