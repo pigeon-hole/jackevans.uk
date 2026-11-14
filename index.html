@@ -62,37 +62,17 @@
     </defs>
     <g filter="url(#spray)">
       <text id="word" class="paint" x="500" y="200" text-anchor="middle" font-size="230">COMING SOON</text>
-      <g id="drips" class="paint"></g>
-      <g id="spatter" class="paint"></g>
     </g>
   </svg>
 
   <script>
-    // Once the stencil font is in, fit the drawing to the word and hang a few drips off the letters.
+    // Once the stencil font is in, fit the drawing to the word.
     (async () => {
       try { await document.fonts.load('700 230px "Stardos Stencil"'); } catch (e) {}
       const svg = document.getElementById('sign'), word = document.getElementById('word');
-      const b = word.getBBox();
-      const drips = document.getElementById('drips'), spat = document.getElementById('spatter');
-      const base = 200;   // the letters sit on the baseline; the box below it is just the font's descender room
-      // (letter, where across it, width, length) — a couple of heavy runs and some short ones
-      [[0, 0.3, 13, 95], [2, 0.15, 9, 38], [2, 0.84, 15, 150], [4, 0.75, 8, 26], [7, 0.4, 11, 70], [9, 0.3, 14, 115], [10, 0.8, 9, 44]]
-        .forEach(([c, f, w, len]) => {
-          const e = word.getExtentOfChar(c);
-          const x = e.x + f * e.width, y0 = base - 30;
-          drips.insertAdjacentHTML('beforeend',
-            `<rect x="${x - w / 2}" y="${y0}" width="${w}" height="${len}" rx="${w / 2}"/>` +
-            `<circle cx="${x}" cy="${y0 + len}" r="${w * 0.85}"/>`);
-        });
-      // stray spatter
-      let s = 17;
-      const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-      for (let i = 0; i < 70; i++) {
-        const x = b.x - 40 + rnd() * (b.width + 80), y = b.y - 50 + rnd() * (base - b.y + 190);
-        spat.insertAdjacentHTML('beforeend', `<circle cx="${x}" cy="${y}" r="${0.8 + rnd() * rnd() * 4}" opacity="${0.35 + rnd() * 0.5}"/>`);
-      }
+      const b = word.getBBox(), base = 200;   // the letters sit on the baseline; below it is just the font's descender room
       const pad = 50;
-      svg.setAttribute('viewBox', `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${base - b.y + 2 * pad + 125}`);
+      svg.setAttribute('viewBox', `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${base - b.y + 2 * pad}`);
     })();
   </script>
 </body>
