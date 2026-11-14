@@ -7,24 +7,93 @@
   <meta name="robots" content="noindex">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rubik+Spray+Paint&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@700&display=swap" rel="stylesheet">
   <style>
     html, body { height: 100%; margin: 0; }
-    body {
-      display: flex; align-items: center; justify-content: center;
-      background: #fff; overflow: hidden;
-    }
-    h1 {
-      margin: 0; padding: 0 4vw;
-      font-family: 'Rubik Spray Paint', 'Permanent Marker', Impact, sans-serif;
-      font-weight: 400; font-size: clamp(32px, 12.5vw, 220px); line-height: 0.95;
-      color: #e8001a; text-align: center; white-space: nowrap;
-      transform: rotate(-6deg);
-      text-shadow: 0 0 1px rgba(232,0,26,0.6), 0 0 18px rgba(232,0,26,0.28), 0 0 42px rgba(232,0,26,0.14);
-    }
+    body { display: flex; align-items: center; justify-content: center; background: #fff; overflow: hidden; }
+    svg { width: min(94vw, 1500px); height: auto; overflow: visible; transform: rotate(-3deg); }
+    svg text { font-family: 'Stardos Stencil', 'Allerta Stencil', 'Black Ops One', Impact, sans-serif; font-weight: 700; }
+    .paint { fill: #e3061c; }
   </style>
 </head>
 <body>
-  <h1>coming soon</h1>
+  <svg id="sign" viewBox="0 0 1000 300" aria-label="coming soon" role="img">
+    <defs>
+      <!-- Spray paint through a cardboard stencil: rough edges, grainy uneven coverage,
+           paint pooling against the cut edges, and soft overspray creeping under the card. -->
+      <filter id="spray" x="-15%" y="-40%" width="130%" height="190%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="rough"/>
+        <feDisplacementMap in="SourceGraphic" in2="rough" scale="4" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="3" result="grain"/>
+        <feColorMatrix in="grain" type="matrix" result="grainA"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.55"/>
+        <feColorMatrix in="grain" type="matrix" result="bodyGrain"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 0 0 0 0.3"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.009" numOctaves="2" seed="11" result="cloud"/>
+        <feColorMatrix in="cloud" type="matrix" result="cloudA"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 0 0 0 0.25"/>
+
+        <feComposite in="shape" in2="bodyGrain" operator="in" result="body1"/>
+        <feComposite in="body1" in2="cloudA" operator="in" result="body"/>
+
+        <!-- paint pools against the stencil's edges -->
+        <feMorphology in="shape" operator="erode" radius="2.5" result="inner"/>
+        <feComposite in="shape" in2="inner" operator="out" result="rim"/>
+        <feFlood flood-color="#b2000f" flood-opacity="0.5" result="rimCol"/>
+        <feComposite in="rimCol" in2="rim" operator="in" result="rimPaint"/>
+        <feComposite in="rimPaint" in2="bodyGrain" operator="in" result="rimGrain"/>
+
+        <!-- overspray under the card -->
+        <feGaussianBlur in="shape" stdDeviation="11" result="haze"/>
+        <feComponentTransfer in="haze" result="hazeA"><feFuncA type="linear" slope="1.1"/></feComponentTransfer>
+        <feComposite in="hazeA" in2="grainA" operator="in" result="hazeGrain"/>
+        <feGaussianBlur in="shape" stdDeviation="3.5" result="bleed"/>
+        <feComponentTransfer in="bleed" result="bleedA"><feFuncA type="linear" slope="1.2"/></feComponentTransfer>
+        <feComposite in="bleedA" in2="grainA" operator="in" result="bleedGrain"/>
+
+        <feMerge>
+          <feMergeNode in="hazeGrain"/>
+          <feMergeNode in="bleedGrain"/>
+          <feMergeNode in="body"/>
+          <feMergeNode in="rimGrain"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <g filter="url(#spray)">
+      <text id="word" class="paint" x="500" y="200" text-anchor="middle" font-size="230">COMING SOON</text>
+      <g id="drips" class="paint"></g>
+      <g id="spatter" class="paint"></g>
+    </g>
+  </svg>
+
+  <script>
+    // Once the stencil font is in, fit the drawing to the word and hang a few drips off the letters.
+    (async () => {
+      try { await document.fonts.load('700 230px "Stardos Stencil"'); } catch (e) {}
+      const svg = document.getElementById('sign'), word = document.getElementById('word');
+      const b = word.getBBox();
+      const drips = document.getElementById('drips'), spat = document.getElementById('spatter');
+      const base = 200;   // the letters sit on the baseline; the box below it is just the font's descender room
+      // (letter, where across it, width, length) — a couple of heavy runs and some short ones
+      [[0, 0.3, 13, 95], [2, 0.15, 9, 38], [2, 0.84, 15, 150], [4, 0.75, 8, 26], [7, 0.4, 11, 70], [9, 0.3, 14, 115], [10, 0.8, 9, 44]]
+        .forEach(([c, f, w, len]) => {
+          const e = word.getExtentOfChar(c);
+          const x = e.x + f * e.width, y0 = base - 30;
+          drips.insertAdjacentHTML('beforeend',
+            `<rect x="${x - w / 2}" y="${y0}" width="${w}" height="${len}" rx="${w / 2}"/>` +
+            `<circle cx="${x}" cy="${y0 + len}" r="${w * 0.85}"/>`);
+        });
+      // stray spatter
+      let s = 17;
+      const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < 70; i++) {
+        const x = b.x - 40 + rnd() * (b.width + 80), y = b.y - 50 + rnd() * (base - b.y + 190);
+        spat.insertAdjacentHTML('beforeend', `<circle cx="${x}" cy="${y}" r="${0.8 + rnd() * rnd() * 4}" opacity="${0.35 + rnd() * 0.5}"/>`);
+      }
+      const pad = 50;
+      svg.setAttribute('viewBox', `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${base - b.y + 2 * pad + 125}`);
+    })();
+  </script>
 </body>
 </html>
