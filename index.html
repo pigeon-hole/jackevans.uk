@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jack Evans</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,900;1,700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
@@ -370,7 +374,7 @@ body {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;   /* tops line up; a taller picture just leaves space under the others */
   gap: 32px;
 }
 .img-btn {
@@ -381,6 +385,12 @@ body {
   cursor: pointer;
   transition: transform 0.2s ease;
 }
+/* A subject that is just picture buttons (Culture): the paper area is one row, and a tall button (the projector)
+   fills its height, its width following from the picture's shape. */
+.subj-content--fill { display: flex; flex-direction: column; padding-bottom: 36px; }
+.subj-content--fill .cards-grid { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.subj-content--fill .img-buttons { flex: 1; min-height: 0; }
+.img-btn--tall { height: 100%; width: auto; }
 .img-btn img {
   display: block;
   width: 100%;
@@ -676,6 +686,78 @@ body {
 }
 .tv-close:hover { color: white; }
 
+/* The projector's reel: zoomed into, it turns side-on to show the film wound round it like a drum.
+   .reel-stage is the 3D scene; each .reel-seg is one frame of film (one film); .reel-side is one of the reel's
+   two sides (the photo's reel); .reel-coil is the side of the wound film, seen through the reel's holes. */
+.reel-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.62);
+  opacity: 0;
+}
+.tv-frame--reel { pointer-events: none; }   /* clicking anywhere but the film closes it */
+.reel-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.reel-turn, .reel-rot, .reel-roll, .reel-drum {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+.reel-side, .reel-coil, .reel-seg { position: absolute; }
+.reel-side { user-select: none; }
+.reel-coil {
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, #19130e 0 2px, #241b14 2px 4px);
+}
+.reel-seg {
+  background: #17110c;
+  backface-visibility: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.reel-seg:active { cursor: grabbing; }
+.reel-holes {   /* sprocket holes down each edge, four to a frame */
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background-image: linear-gradient(transparent 26%, #ddd4c4 26%, #ddd4c4 74%, transparent 74%);
+}
+.reel-pic {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #2a231c;
+}
+.reel-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+.reel-pic span {   /* placeholder number, until there are films */
+  position: absolute;
+  right: 5%;
+  bottom: 4%;
+  font: 600 clamp(11px, 2.4vmin, 20px) 'Barlow', Arial, sans-serif;
+  color: rgba(255,255,255,0.8);
+}
+.reel-shade {   /* frames darken as they curve away */
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* A picture from the TV screen, enlarged: it grows out of its spot on the screen. */
 #img-pop {
   position: absolute;
@@ -942,6 +1024,10 @@ body {
   .subj-tabs         { gap: 8px; }
   .subj-tab          { font-size: 11px; letter-spacing: 1.5px; padding: 7px 11px; }
   .subj-content      { padding: 22px 16px 56px; }
+  /* On a phone the TV and projector only fit side by side at a set width, so the projector doesn't fill the height. */
+  .subj-content--fill { display: block; padding-bottom: 56px; }
+  .subj-content--fill .cards-grid { display: grid; }
+  .img-btn--tall     { height: auto; width: clamp(120px, 19.5vw, 210px); }
   .subj-desc         { font-size: 17px; }
   .card-title        { font-size: 24px; }
   .card-desc         { font-size: 16px; }
@@ -1091,7 +1177,12 @@ subjects.culture = {
     { id: 'tv', label: 'TV', img: 'images/culture-tv.webp',
       screen: { left: 0.131, top: 0.119, width: 0.744, height: 0.575 },
       prev:   { left: 0.315, top: 0.7625, width: 0.0335, height: 0.0395 },
-      next:   { left: 0.6945, top: 0.7625, width: 0.0345, height: 0.0395 } }
+      next:   { left: 0.6945, top: 0.7625, width: 0.0345, height: 0.0395 } },
+    // tall = the button fills the height of the paper area (size = the picture's pixels, for its shape).
+    // reel = its top reel: centre (x, y) and radius as fractions of the picture's width / height / width, plus the
+    // reel on its own. The pop-up zooms into it and it turns to show the films (films.json) wound round it.
+    { id: 'projector', label: 'Film projector', img: 'images/culture-projector.webp', tall: true, size: [697, 1359],
+      reel: { x: 0.3864, y: 0.1214, r: 0.2271, img: 'images/projector-reel.webp' } }
   ]
 };
 
@@ -1351,7 +1442,7 @@ function buildSubjectHTML(s, activeCat) {
       <div class="subj-name">${s.label}</div>
       <div class="subj-tabs">${tabs}</div>
     </div>
-    <div class="subj-content">
+    <div class="subj-content${!activeCat && s.buttons ? ' subj-content--fill' : ''}">
       ${s.desc ? `<p class="subj-desc">${s.desc}</p>` : ''}
       ${activeCat ? `<div class="cat-label">${activeCat}</div>` : ''}
       <div class="cards-grid" id="cards-grid">${buildCards(s, activeCat)}</div>
@@ -1394,7 +1485,7 @@ function buildCardImage(ex) {
 // Cut-out pictures used as buttons (a subject without tabs can show these instead of cards).
 function buildImageButtons(s) {
   return `<div class="img-buttons">${s.buttons.map(b => `
-    <button type="button" class="img-btn" data-btn="${b.id}" aria-label="${b.label}">
+    <button type="button" class="img-btn${b.tall ? ' img-btn--tall' : ''}" data-btn="${b.id}" aria-label="${b.label}"${b.size ? ` style="aspect-ratio: ${b.size[0]} / ${b.size[1]};"` : ''}>
       <img src="${b.img}" alt="" draggable="false">
     </button>`).join('')}
   </div>`;
@@ -1477,7 +1568,7 @@ function buildShowPage(show) {
 // A burst of static while the channel changes; the new show appears halfway through.
 let tvStaticRun = 0;
 function changeChannel(step) {
-  if (!tvPop || tvPop.closing || !tvShows || !tvShows.length) return;   // with one show it just re-tunes to it
+  if (!tvPop || tvPop.closing || !tvPop.crt || !tvShows || !tvShows.length) return;   // with one show it just re-tunes to it
   tvChannel = (tvChannel + step + tvShows.length) % tvShows.length;
   const crt = tvPop.crt;
   const run = ++tvStaticRun;
@@ -1678,9 +1769,9 @@ function makeCrt(canvas, screen) {
 // The screen is one bent drawing, so a click is traced back through the curve to the laid-out page
 // to find which picture is under it. Returns { el, img } or null.
 function tvImageAt(clientX, clientY) {
-  if (!tvPop || tvPop.closing) return null;
+  if (!tvPop || tvPop.closing || !tvPop.crt) return null;
   const screen = tvPop.frame.querySelector('.tv-screen').getBoundingClientRect();
-  const px = (clientX - screen.left) / screen.width * 2 - 1;
+  const px =(clientX - screen.left) / screen.width * 2 - 1;
   const py = (clientY - screen.top) / screen.height * 2 - 1;
   const bend = 1 + CURVE * (px * px + py * py);      // the same bend as the picture (see CRT_FRAG)
   const qx = px * bend, qy = py * bend;
@@ -1786,7 +1877,7 @@ function tvRender() {
 }
 // Puts a show on screen, and redraws as its pictures finish loading.
 function tvSetPage(show) {
-  if (!tvPop) return;
+  if (!tvPop || !tvPop.pageSrc) return;
   tvPop.pageSrc.innerHTML = buildShowPage(show);
   tvRender();
   tvPop.pageSrc.querySelectorAll('img').forEach(img => {
@@ -1796,8 +1887,9 @@ function tvSetPage(show) {
   });
 }
 
-/* ---- Picture-button pop-up (the TV) ---- */
+/* ---- Picture-button pop-up (the TV, the projector) ---- */
 
+// Only a button with a screen (the TV) gets the CRT parts; the others just grow into the pop-up.
 let tvPop = null;   // { btnImg, to, startT, anims, closing, frame, backdrop, close }
 
 // The largest size that fits the window, centred.
@@ -1824,6 +1916,7 @@ function openTvPop(btnEl, b) {
   const from = btnImg.getBoundingClientRect();
   const to   = tvFinalRect(from.width / from.height);
   const sc   = b.screen;
+  const reel = b.reel ? reelSetup(b.reel, to) : null;
 
   // Same shadow as the button, scaled up so it matches at the start of the motion.
   const z = to.width / from.width;
@@ -1831,29 +1924,40 @@ function openTvPop(btnEl, b) {
 
   pop.innerHTML = `
     <div class="tv-backdrop"></div>
-    <div class="tv-frame" style="left:${to.left}px; top:${to.top}px; width:${to.width}px;">
+    ${reel ? '<div class="reel-dim"></div>' : ''}
+    <div class="tv-frame${reel ? ' tv-frame--reel' : ''}" style="left:${to.left}px; top:${to.top}px; width:${to.width}px;">
       <img src="${b.img}" alt="" draggable="false" style="filter:${shadow}">
-      <div class="tv-screen" style="left:${sc.left*100}%; top:${sc.top*100}%; width:${sc.width*100}%; height:${sc.height*100}%;">
+      ${sc ? `<div class="tv-screen" style="left:${sc.left*100}%; top:${sc.top*100}%; width:${sc.width*100}%; height:${sc.height*100}%;">
         <div class="tv-page-src"></div>
         <div class="tv-black"></div>
         <div class="tv-content">
           <canvas class="tv-gl" aria-hidden="true"></canvas>
         </div>
         <div class="tv-glass"></div>
-      </div>
+      </div>` : ''}
       ${b.prev ? `<button type="button" class="tv-ch" data-ch="-1" aria-label="Previous show" style="${pctBox(b.prev)}"></button>` : ''}
       ${b.next ? `<button type="button" class="tv-ch" data-ch="1" aria-label="Next show" style="${pctBox(b.next)}"></button>` : ''}
     </div>
+    ${reel ? reelHTML(b.reel, reel) : ''}
     <button type="button" class="tv-close">close ×</button>`;
   pop.classList.add('open');
   btnImg.style.visibility = 'hidden';
 
   tvPop = { btnImg, to, startT: tvButtonTransform(btnImg, to), anims: [], powerAnims: [], closing: false,
+            reel, stage: pop.querySelector('.reel-stage'), turn: pop.querySelector('.reel-turn'), rot: pop.querySelector('.reel-rot'),
+            rollEl: pop.querySelector('.reel-roll'), dim: pop.querySelector('.reel-dim'),
             frame: pop.querySelector('.tv-frame'), backdrop: pop.querySelector('.tv-backdrop'), close: pop.querySelector('.tv-close'),
             content: pop.querySelector('.tv-content'), glass: pop.querySelector('.tv-glass'), black: pop.querySelector('.tv-black'),
             pageSrc: pop.querySelector('.tv-page-src'),
-            crt: makeCrt(pop.querySelector('.tv-gl'), pop.querySelector('.tv-screen')) };
+            crt: sc ? makeCrt(pop.querySelector('.tv-gl'), pop.querySelector('.tv-screen')) : null };
   tvSetPage(tvShows && tvShows[tvChannel]);
+  if (reel) {
+    reel.startT = reelStartT(reel, btnImg);   // over the photo's reel, where the button is right now
+    reel.drum = pop.querySelector('.reel-drum');
+    reel.segs = [...pop.querySelectorAll('.reel-seg')];
+    reel.segs.forEach(seg => { seg.shade = seg.querySelector('.reel-shade'); });
+    reelLoop(tvPop);
+  }
   animateTv(tvPop, true, true);
 }
 
@@ -1902,8 +2006,189 @@ function tvButtonTransform(btnImg, to) {
   return `translate(${r.left - p.left - to.left}px, ${r.top - p.top - to.top}px) scale(${r.width / to.width})`;
 }
 
+/* ---- The projector: at the click, a 3D copy of its top reel is laid exactly over the photo's, and at once it
+   turns side-on while the view zooms into it, until the film wound round it fills the screen like a drum.
+   Each frame of film is a film (films.json); scrolling turns the reel. Closing plays the same motion backwards. ---- */
+
+const REEL_MS    = { turn: 1000, zoomDelay: 80, zoom: 1170 };   // the turn starts at the click; the zoom follows just behind
+const REEL_EASE  = { turn: 'cubic-bezier(0.25, 0.1, 0.25, 1)', zoom: 'cubic-bezier(0.55, 0, 0.25, 1)' };
+const REEL_SLOTS = 14;                       // frames round the drum
+const REEL_STEP  = 360 / REEL_SLOTS;         // degrees from one frame to the next
+const REEL_BACK  = 1.6;                      // closing plays the opening backwards, this much faster
+const REEL_ANGLE = -12;                      // how far short of square-on the reel stops turning (degrees)
+const REEL_ROLL  = -60;                      // it also rolls a sixth of a turn on its axle as it opens (its holes match the photo either way)
+const REEL_PLACEHOLDERS = ['#7a4b3a', '#3f5b6b', '#8a7a4a', '#4d6b4a', '#6b4a6b', '#a0603a',
+                           '#355060', '#7a6a5a', '#5a6b7a', '#8a5a4a', '#4a5a3a', '#6a5a7a'];
+let films = null;                            // filled from films.json when the page loads
+
+function loadFilms() {
+  return fetch('films.json', { cache: 'no-cache' })
+    .then(r => r.json())
+    .then(d => { films = d.films || []; })
+    .catch(() => { films = []; })
+    .then(() => { if (tvPop && tvPop.reel) reelRefill(tvPop.reel); });   // the reel was opened before the list arrived
+}
+
+// Sizes for the reel scene, and the zoom that brings the photo's top reel to the middle of the window at the 3D reel's size.
+// rd = the top reel in the picture: centre (x, y) and radius, as fractions of the picture's width / height / width.
+function reelSetup(rd, to) {
+  const p  = document.getElementById('page').getBoundingClientRect();
+  const u  = Math.min(p.height, p.width * 1.25);
+  const rf = 0.44 * u;                                    // radius of the wound film
+  const rr = 1.1 * rf;                                    // radius of the reel's sides
+  const segH = 2 * rf * Math.sin(Math.PI / REEL_SLOTS);   // one frame's height round the drum
+  const fh = 0.8 * segH, fw = 1.78 * fh, m = 0.14 * fh;   // the picture, and the sprocket edges either side
+  const w  = fw + 2 * m;                                  // width of the film
+  const cx = p.width / 2, cy = p.height / 2;
+  const lx = rd.x * to.width, ly = rd.y * to.height, z = rr / (rd.r * to.width);
+  return { rd, rf, rr, segH, fh, fw, m, w, cx, cy, persp: 2.6 * u, pxPerDeg: rf * 1.3 * Math.PI / 180,
+    zoomT: `translate(${cx - to.left - z * lx}px, ${cy - to.top - z * ly}px) scale(${z})`,
+    homeT: 'translate(0px, 0px) scale3d(1, 1, 1)',          // the 3D reel in the middle, full size
+    faceT: `translateZ(${-w / 2}px) rotateY(-90deg)`,       // face-on, its near side flat on the photo's reel
+    drumT: `translateZ(0px) rotateY(${REEL_ANGLE}deg)`,     // turned to look at the film, not quite square-on
+    spin: 0, target: 0, roll: 0, drawn: null, drawnSpin: null, raf: 0, snapT: 0, drag: null, moved: false };
+}
+
+// Where the 3D reel has to be to sit exactly over the photo's reel on the button (which may have moved a little).
+function reelStartT(R, btnImg) {
+  const p = document.getElementById('page').getBoundingClientRect();
+  const r = btnImg.getBoundingClientRect();
+  const s = R.rd.r * r.width / R.rr;
+  return `translate(${r.left - p.left + R.rd.x * r.width - R.cx}px, ${r.top - p.top + R.rd.y * r.height - R.cy}px) scale3d(${s}, ${s}, ${s})`;
+}
+
+function reelHTML(rd, g) {
+  const holes = side => `<div class="reel-holes" style="${side}:${g.m * 0.3}px; width:${g.m * 0.4}px; background-size:100% ${g.segH / 4}px;"></div>`;
+  const segs = Array.from({ length: REEL_SLOTS }, (_, i) => `
+          <div class="reel-seg" style="left:${-g.w / 2}px; top:${-g.segH / 2 - 0.5}px; width:${g.w}px; height:${g.segH + 1}px;
+               transform: rotateX(${-i * REEL_STEP}deg) translateZ(${g.rf}px);">
+            ${holes('left')}${holes('right')}
+            <div class="reel-pic" style="left:${g.m}px; top:${(g.segH - g.fh) / 2}px; width:${g.fw}px; height:${g.fh}px;"></div>
+            <div class="reel-shade"></div>
+          </div>`).join('');
+  const side = x => `<img class="reel-side" src="${rd.img}" alt="" draggable="false"
+          style="left:${-g.rr}px; top:${-g.rr}px; width:${2 * g.rr}px; height:${2 * g.rr}px; transform: translateX(${x}px) rotateY(90deg);">`;
+  const coil = x => `<div class="reel-coil"
+          style="left:${-g.rf}px; top:${-g.rf}px; width:${2 * g.rf}px; height:${2 * g.rf}px; transform: translateX(${x}px) rotateY(90deg);"></div>`;
+  // reel-turn follows the photo's reel (position and size); reel-rot turns it side-on; reel-roll rolls it as it opens;
+  // reel-drum is turned by scrolling.
+  return `
+    <div class="reel-stage" aria-hidden="true" style="perspective:${g.persp}px;">
+      <div class="reel-turn" style="left:${g.cx}px; top:${g.cy}px;">
+        <div class="reel-rot"><div class="reel-roll"><div class="reel-drum">
+          ${coil(-g.w / 2 + 3)}${coil(g.w / 2 - 3)}
+          ${side(-g.w / 2)}${side(g.w / 2)}
+          ${segs}
+        </div></div></div>
+      </div>
+    </div>`;
+}
+
+const reelCount = () => (films && films.length) || REEL_PLACEHOLDERS.length;
+const reelClamp = deg => Math.max(0, Math.min((reelCount() - 1) * REEL_STEP, deg));
+
+// What one frame of film shows: film k's still (or numbered placeholders while there are no films),
+// and plain leader past either end.
+function reelSlot(seg, k) {
+  const pic = seg.querySelector('.reel-pic');
+  if (k < 0 || k >= reelCount()) {
+    pic.style.background = '#211a14';
+    pic.innerHTML = '';
+  } else if (films && films.length) {
+    const f = films[k];
+    pic.style.background = '#2a231c';
+    pic.innerHTML = `<img src="films/${encodeURIComponent(f.id)}/still.webp" alt="${escapeHTML(f.title)}" draggable="false" onerror="this.remove()">`;
+  } else {
+    pic.style.background = `linear-gradient(rgba(255,255,255,0.18) 0 42%, transparent 42%), ${REEL_PLACEHOLDERS[k]}`;
+    pic.innerHTML = `<span>${k + 1}</span>`;
+  }
+}
+
+// The drum has 14 frames, but any number of films: a frame is re-filled while it's round the back, out of sight.
+function reelRender(R) {
+  const total = R.spin + R.roll;   // the drum's turn by scrolling, plus its roll while opening or closing
+  if (R.drawn === total && R.drawnSpin === R.spin) return;
+  R.drawn = total; R.drawnSpin = R.spin;
+  R.drum.style.transform = `rotateX(${R.spin}deg)`;
+  const at = total / REEL_STEP;    // which film is at the front (part-way between two while turning)
+  R.segs.forEach((seg, i) => {
+    const k = i + REEL_SLOTS * Math.round((at - i) / REEL_SLOTS);
+    if (seg.k !== k) { seg.k = k; reelSlot(seg, k); }
+    const facing = Math.max(0, Math.cos((total - k * REEL_STEP) * Math.PI / 180));
+    seg.shade.style.opacity = (0.82 * (1 - facing ** 1.5)).toFixed(3);
+  });
+}
+
+function reelRefill(R) {
+  R.segs.forEach(seg => { seg.k = null; });
+  R.target = reelClamp(R.target);
+  R.drawn = null;
+}
+
+// Eases the reel round to where it's been scrolled; while closing, round to where its six holes match the photo again.
+function reelLoop(state) {
+  const R = state.reel;
+  const tick = () => {
+    if (tvPop !== state) return;
+    if (state.closing) R.target = Math.round(R.spin / 60) * 60;
+    if (!R.drag) {
+      R.spin += (R.target - R.spin) * 0.16;
+      if (Math.abs(R.target - R.spin) < 0.01) R.spin = R.target;
+    }
+    const t = getComputedStyle(state.rollEl).transform;   // the roll is animated by the browser: read where it has got to
+    const m = t === 'none' ? new DOMMatrix() : new DOMMatrix(t);
+    R.roll = Math.atan2(m.m23, m.m22) * 180 / Math.PI;
+    reelRender(R);
+    R.raf = requestAnimationFrame(tick);
+  };
+  R.raf = requestAnimationFrame(tick);
+}
+
+// Turns the reel by some degrees, then settles on the nearest frame once the scrolling stops.
+function reelNudge(R, deg, settle) {
+  R.target = reelClamp(R.target + deg);
+  clearTimeout(R.snapT);
+  R.snapT = setTimeout(() => { R.target = reelClamp(Math.round(R.target / REEL_STEP) * REEL_STEP); }, settle);
+}
+
+const reelZoomFrames  = state => [{ transform: state.startT }, { transform: state.reel.zoomT }];        // the photo
+const reelTrackFrames = state => [{ transform: state.reel.startT }, { transform: state.reel.homeT }];   // the 3D reel, over its reel
+
+// Opening: the reel turns from the click and the view zooms into it just behind. The photo and the 3D reel move
+// with the same timing, so the reel stays exactly over the photo's reel until the photo has faded. Closing plays
+// the same motion backwards (faster), from wherever it has got to, so it can be reversed part-way either way.
+function animateReel(state, open, fresh) {
+  const R = state.reel;
+  if (!fresh) {
+    if (!open) {   // the button may have settled since it was clicked: land exactly on it
+      R.startT = reelStartT(R, state.btnImg);
+      state.anims[0].effect.setKeyframes(reelZoomFrames(state));
+      state.anims[1].effect.setKeyframes(reelTrackFrames(state));
+    }
+    state.anims.forEach(a => { a.playbackRate = open ? 1 : -REEL_BACK; });
+    if (open) R.target = reelClamp(Math.round(R.target / REEL_STEP) * REEL_STEP);
+    return;
+  }
+  const ms   = n => reduceMotion.matches ? 1 : n;
+  const zoom = { duration: ms(REEL_MS.zoom), delay: ms(REEL_MS.zoomDelay), easing: REEL_EASE.zoom, fill: 'both' };
+  const turn = { duration: ms(REEL_MS.turn), easing: REEL_EASE.turn, fill: 'both' };
+  const over = { ...zoom, easing: 'linear' };   // fades timed against the zoom
+  state.anims = [
+    state.frame.animate(reelZoomFrames(state), zoom),
+    state.turn.animate(reelTrackFrames(state), zoom),
+    state.rot.animate([{ transform: R.faceT }, { transform: R.drumT }], turn),
+    state.rollEl.animate([{ transform: `rotateX(${REEL_ROLL}deg)` }, { transform: 'rotateX(0deg)' }], turn),
+    state.frame.animate([{ opacity: 1 }, { opacity: 1, offset: 0.3 }, { opacity: 0, offset: 0.7 }, { opacity: 0 }], over),
+    state.dim.animate([{ opacity: 0 }, { opacity: 0, offset: 0.2 }, { opacity: 1, offset: 0.6 }, { opacity: 1 }], over),
+    state.stage.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms(220), easing: 'ease-out', fill: 'both' }),
+    state.backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms(360), easing: 'ease-out', fill: 'both' }),
+    state.close.animate([{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }], { duration: ms(600), fill: 'both' })
+  ];
+}
+
 // Grows (open) or shrinks (close) from wherever the TV currently is.
 function animateTv(state, open, fresh) {
+  if (state.reel) { animateReel(state, open, fresh); return; }
   const cur = el => getComputedStyle(el);
   const fromT  = fresh ? state.startT : cur(state.frame).transform;
   const fromBd = fresh ? 0 : +cur(state.backdrop).opacity;
@@ -1921,7 +2206,7 @@ function animateTv(state, open, fresh) {
       : [{ opacity: fromCl }, { opacity: 0, offset: 0.3 }, { opacity: 0 }], { duration: d, fill: 'forwards' })
   ];
   // The picture comes on as the TV settles into place, and goes off as it starts to shrink.
-  tvPower(state, open, open && fresh && !quick ? 380 : 0);
+  if (state.content) tvPower(state, open, open && fresh && !quick ? 380 : 0);
 }
 
 function closeTvPop() {
@@ -1932,11 +2217,12 @@ function closeTvPop() {
   pop.style.pointerEvents = 'none';
   state.startT = tvButtonTransform(state.btnImg, state.to);   // the button may have settled since it was clicked
   animateTv(state, false);
-  state.anims[0].finished.then(() => {
+  Promise.all(state.anims.map(a => a.finished)).then(() => {
     if (tvPop !== state || !state.closing) return;   // re-opened part-way
     pop.classList.remove('open');
     pop.style.pointerEvents = '';
-    state.crt.destroy();   // frees the graphics context (browsers only allow a few at once)
+    if (state.crt) state.crt.destroy();   // frees the graphics context (browsers only allow a few at once)
+    if (state.reel) cancelAnimationFrame(state.reel.raf);
     pop.innerHTML = '';
     state.btnImg.style.visibility = '';
     tvPop = null;
@@ -1965,7 +2251,7 @@ function onOverlayClick(e) {
   const imgBtn = e.target.closest('.img-btn');
   if (imgBtn) {
     const b = subjects[currentSubjId].buttons.find(x => x.id === imgBtn.dataset.btn);
-    if (b && b.screen) openTvPop(imgBtn, b);
+    if (b) openTvPop(imgBtn, b);
     return;
   }
 
@@ -2203,6 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('load', () => {
     Object.values(subjects).forEach(s => {
       Object.values(s.catBackgrounds || {}).forEach(b => { if (b.src) new Image().src = b.src; });
+      (s.buttons || []).forEach(b => { if (b.reel) new Image().src = b.reel.img; });   // so the 3D reel is ready at the click
     });
   });
 
@@ -2212,6 +2499,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadShows();
+  loadFilms();
   document.fonts.ready.then(tvRender);   // redraw the TV if it opened before the fonts arrived
 
   // Clicking outside the TV, or "close", shrinks it back into its button. Channels 1 / 12 change show.
@@ -2223,8 +2511,38 @@ document.addEventListener('DOMContentLoaded', () => {
       if (hit) openImagePop(hit);
       return;
     }
-    if (!e.target.closest('.tv-frame') || e.target.closest('.tv-close')) closeTvPop();
+    if (tvPop && tvPop.reel && tvPop.reel.moved) { tvPop.reel.moved = false; return; }   // the end of a drag, not a click
+    if (!e.target.closest('.tv-frame, .reel-seg') || e.target.closest('.tv-close')) closeTvPop();
   });
+  // The projector's reel: scrolling, dragging the film, or the up / down keys turn it.
+  const tvPopEl = document.getElementById('tv-pop');
+  tvPopEl.addEventListener('wheel', e => {
+    if (!tvPop || !tvPop.reel || tvPop.closing) return;
+    e.preventDefault();
+    reelNudge(tvPop.reel, e.deltaY * (e.deltaMode === 1 ? 16 : 1) * 0.2, 160);
+  }, { passive: false });
+  tvPopEl.addEventListener('pointerdown', e => {
+    if (!tvPop || !tvPop.reel || tvPop.closing || !e.target.closest('.reel-seg')) return;
+    const R = tvPop.reel;
+    R.drag = { y: e.clientY, from: R.spin, id: e.pointerId };
+    R.moved = false;
+    tvPopEl.setPointerCapture(e.pointerId);
+  });
+  tvPopEl.addEventListener('pointermove', e => {
+    const R = tvPop && tvPop.reel;
+    if (!R || !R.drag || e.pointerId !== R.drag.id) return;
+    const dy = e.clientY - R.drag.y;
+    if (Math.abs(dy) > 4) R.moved = true;
+    R.spin = R.target = reelClamp(R.drag.from - dy / R.pxPerDeg);   // the film follows the finger
+  });
+  const reelDragEnd = e => {
+    const R = tvPop && tvPop.reel;
+    if (!R || !R.drag || e.pointerId !== R.drag.id) return;
+    R.drag = null;
+    reelNudge(R, 0, 0);
+  };
+  tvPopEl.addEventListener('pointerup', reelDragEnd);
+  tvPopEl.addEventListener('pointercancel', reelDragEnd);
   // A magnifying-glass pointer over pictures that can be enlarged.
   document.getElementById('tv-pop').addEventListener('mousemove', e => {
     if (e.target.classList.contains('tv-gl')) e.target.style.cursor = tvImageAt(e.clientX, e.clientY) ? 'zoom-in' : '';
@@ -2236,6 +2554,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (imgPop) { if (e.key === 'Escape') closeImagePop(); return; }
     if (tvPop && !tvPop.closing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       changeChannel(e.key === 'ArrowRight' ? 1 : -1);
+      return;
+    }
+    if (tvPop && tvPop.reel && !tvPop.closing && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      reelNudge(tvPop.reel, e.key === 'ArrowDown' ? REEL_STEP : -REEL_STEP, 0);
       return;
     }
     if (e.key !== 'Escape') return;
