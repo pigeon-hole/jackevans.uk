@@ -1142,6 +1142,7 @@ const subjects = {
   },
   technology: {
     id: 'technology',
+    soon: true,
     label: 'Technology',
     kicker: '',
     colorClass: 'box--red',
@@ -1201,7 +1202,7 @@ function renderHome() {
         <div class="box-title">${s.label}</div>
       </div>
       <div class="box-footer">
-        <div class="box-cats">${s.categories.length ? '' : 'coming soon'}</div>
+        <div class="box-cats">${s.soon ? 'coming soon' : ''}</div>
       </div>
     </div>`;
   }).join('');
