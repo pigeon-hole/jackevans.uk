@@ -109,7 +109,7 @@
     })();
 
     // The pigeon's latch: the right password opens the site in progress, and this browser remembers it.
-    const GATE = { hash: '588774b7a57272158c977d5efe6af40d395d6b4a3b9f33603415f7f1831c1890', door: 'site/' };
+    const GATE = { hash: '702d5c1acb49a5da5dfbe46aebeae3e12a42640fd76572f373411cd0654d91fd', door: 'site/' };
     const pigeon = document.getElementById('pigeon'), gate = document.getElementById('gate'), pw = document.getElementById('pw');
     const sha256 = async s => {
       const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
