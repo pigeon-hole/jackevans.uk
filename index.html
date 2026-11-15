@@ -8,12 +8,39 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@700&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
   <style>
     html, body { height: 100%; margin: 0; }
     body { display: flex; align-items: center; justify-content: center; background: #fff; overflow: hidden; }
     svg { width: min(94vw, 1500px); height: auto; overflow: visible; transform: rotate(-3deg); }
     svg text { font-family: 'Stardos Stencil', 'Allerta Stencil', 'Black Ops One', Impact, sans-serif; font-weight: 700; }
     .paint { fill: #e3061c; }
+
+    /* the pigeon in the corner, and the password box it opens */
+    #pigeon {
+      position: fixed; right: 18px; bottom: 16px; width: 46px; height: 46px; padding: 0;
+      border: 0; background: none; cursor: pointer; opacity: 0.9; transition: transform 0.15s, opacity 0.15s;
+    }
+    #pigeon img { width: 100%; height: 100%; display: block; }
+    #pigeon:hover, #pigeon:focus-visible { transform: scale(1.08); opacity: 1; outline: none; }
+    #gate {
+      position: fixed; right: 18px; bottom: 72px; display: flex; margin: 0;
+      border: 2px solid #e3061c; background: #fff;
+    }
+    #gate[hidden] { display: none; }
+    #gate input {
+      width: 11em; padding: 8px 10px; border: 0; outline: none; background: none;
+      font: 18px 'Times New Roman', Times, serif; color: #222;
+    }
+    #gate button {
+      padding: 0 12px; border: 0; border-left: 2px solid #e3061c; background: none; color: #e3061c;
+      font: 20px 'Times New Roman', Times, serif; cursor: pointer;
+    }
+    #gate.no { animation: shake 0.35s; }
+    @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
   </style>
 </head>
 <body>
@@ -65,6 +92,12 @@
     </g>
   </svg>
 
+  <button id="pigeon" type="button" aria-label="Open the site"><img src="images/favicon-192.png" alt=""></button>
+  <form id="gate" hidden autocomplete="off">
+    <input id="pw" type="password" aria-label="Password" placeholder="password" autocomplete="current-password">
+    <button type="submit" aria-label="Enter">&rarr;</button>
+  </form>
+
   <script>
     // Once the stencil font is in, fit the drawing to the word.
     (async () => {
@@ -74,6 +107,31 @@
       const pad = 50;
       svg.setAttribute('viewBox', `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${base - b.y + 2 * pad}`);
     })();
+
+    // The pigeon's latch: the right password opens the site in progress, and this browser remembers it.
+    const GATE = { hash: '588774b7a57272158c977d5efe6af40d395d6b4a3b9f33603415f7f1831c1890', door: 'site/' };
+    const pigeon = document.getElementById('pigeon'), gate = document.getElementById('gate'), pw = document.getElementById('pw');
+    const sha256 = async s => {
+      const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+    const remembered = () => { try { return localStorage.getItem('pigeon') === GATE.hash; } catch (e) { return false; } };
+    pigeon.addEventListener('click', () => {
+      if (remembered()) { location.href = GATE.door; return; }
+      gate.hidden = !gate.hidden;
+      if (!gate.hidden) pw.focus();
+    });
+    gate.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (await sha256(pw.value.trim()) === GATE.hash) {
+        try { localStorage.setItem('pigeon', GATE.hash); } catch (e) {}
+        location.href = GATE.door;
+      } else {
+        gate.classList.remove('no'); void gate.offsetWidth; gate.classList.add('no');
+        pw.value = ''; pw.focus();
+      }
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') gate.hidden = true; });
   </script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+{
+  "_template": {
+    "id": "folder-name-in-films",
+    "title": "Film Title",
+    "year": 2000
+  },
+
+  "films": []
+}
