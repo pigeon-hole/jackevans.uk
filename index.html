@@ -378,7 +378,8 @@ body {
   gap: 32px;
 }
 .img-btn {
-  width: clamp(160px, 26vw, 280px);
+  width: calc(clamp(160px, 26vw, 280px) * var(--btn-scale, 1));   /* --btn-scale: a button drawn bigger than the TV */
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -1096,7 +1097,9 @@ subjects.culture = {
     { id: 'tv', label: 'TV', img: 'images/culture-tv.webp',
       screen: { left: 0.131, top: 0.119, width: 0.744, height: 0.575 },
       prev:   { left: 0.315, top: 0.7625, width: 0.0335, height: 0.0395 },
-      next:   { left: 0.6945, top: 0.7625, width: 0.0345, height: 0.0395 } }
+      next:   { left: 0.6945, top: 0.7625, width: 0.0345, height: 0.0395 } },
+    // scale = width compared with the TV's. The Beluga does nothing when clicked yet.
+    { id: 'beluga', label: 'Airbus Beluga', img: 'images/culture-beluga.webp', scale: 1.5 }
   ]
 };
 
@@ -1399,7 +1402,7 @@ function buildCardImage(ex) {
 // Cut-out pictures used as buttons (a subject without tabs can show these instead of cards).
 function buildImageButtons(s) {
   return `<div class="img-buttons">${s.buttons.map(b => `
-    <button type="button" class="img-btn" data-btn="${b.id}" aria-label="${b.label}">
+    <button type="button" class="img-btn" data-btn="${b.id}" aria-label="${b.label}"${b.scale ? ` style="--btn-scale: ${b.scale};"` : ''}>
       <img src="${b.img}" alt="" draggable="false">
     </button>`).join('')}
   </div>`;
