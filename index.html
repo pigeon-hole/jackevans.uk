@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>jack evans</title>
   <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b0b0b">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@800&display=swap" rel="stylesheet">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
   <style>
     html, body { height: 100%; margin: 0; }
-    body { display: flex; align-items: center; justify-content: center; background: #fff; overflow: hidden; }
-    svg { width: min(94vw, 1500px); height: auto; overflow: visible; transform: rotate(-3deg); }
-    svg text { font-family: 'Stardos Stencil', 'Allerta Stencil', 'Black Ops One', Impact, sans-serif; font-weight: 700; }
-    .paint { fill: #e3061c; }
+    body { display: flex; align-items: center; justify-content: center; background: #0b0b0b; overflow: hidden; }
+    svg { width: min(44vw, 720px); height: auto; overflow: visible; transform: rotate(-3deg); }
+    svg text { font-family: 'Big Shoulders Stencil Display', 'Saira Stencil One', Impact, sans-serif; font-weight: 800; }
+    @media (max-width: 640px) { svg { width: 72vw; } }
+    .paint { fill: #f2efe8; }
 
     /* the pigeon in the corner, and the password box it opens */
     #pigeon {
@@ -28,15 +30,16 @@
     #pigeon:hover, #pigeon:focus-visible { transform: scale(1.08); opacity: 1; outline: none; }
     #gate {
       position: fixed; right: 18px; bottom: 72px; display: flex; margin: 0;
-      border: 2px solid #e3061c; background: #fff;
+      border: 2px solid #f2efe8; background: #0b0b0b;
     }
     #gate[hidden] { display: none; }
+    #gate input::placeholder { color: rgba(242,239,232,0.45); }
     #gate input {
       width: 11em; padding: 8px 10px; border: 0; outline: none; background: none;
-      font: 18px 'Times New Roman', Times, serif; color: #222;
+      font: 18px 'Times New Roman', Times, serif; color: #f2efe8;
     }
     #gate button {
-      padding: 0 12px; border: 0; border-left: 2px solid #e3061c; background: none; color: #e3061c;
+      padding: 0 12px; border: 0; border-left: 2px solid #f2efe8; background: none; color: #f2efe8;
       font: 20px 'Times New Roman', Times, serif; cursor: pointer;
     }
     #gate.no { animation: shake 0.35s; }
@@ -50,13 +53,13 @@
            paint pooling against the cut edges, and soft overspray creeping under the card. -->
       <filter id="spray" x="-15%" y="-40%" width="130%" height="190%" color-interpolation-filters="sRGB">
         <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="rough"/>
-        <feDisplacementMap in="SourceGraphic" in2="rough" scale="4" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+        <feDisplacementMap in="SourceGraphic" in2="rough" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="shape"/>
 
         <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="3" result="grain"/>
         <feColorMatrix in="grain" type="matrix" result="grainA"
           values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.55"/>
         <feColorMatrix in="grain" type="matrix" result="bodyGrain"
-          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 0 0 0 0.3"/>
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0 0 0 0.5"/>
         <feTurbulence type="fractalNoise" baseFrequency="0.009" numOctaves="2" seed="11" result="cloud"/>
         <feColorMatrix in="cloud" type="matrix" result="cloudA"
           values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 0 0 0 0.25"/>
@@ -65,18 +68,18 @@
         <feComposite in="body1" in2="cloudA" operator="in" result="body"/>
 
         <!-- paint pools against the stencil's edges -->
-        <feMorphology in="shape" operator="erode" radius="2.5" result="inner"/>
+        <feMorphology in="shape" operator="erode" radius="1.5" result="inner"/>
         <feComposite in="shape" in2="inner" operator="out" result="rim"/>
-        <feFlood flood-color="#b2000f" flood-opacity="0.5" result="rimCol"/>
+        <feFlood flood-color="#ffffff" flood-opacity="0.45" result="rimCol"/>
         <feComposite in="rimCol" in2="rim" operator="in" result="rimPaint"/>
         <feComposite in="rimPaint" in2="bodyGrain" operator="in" result="rimGrain"/>
 
         <!-- overspray under the card -->
-        <feGaussianBlur in="shape" stdDeviation="11" result="haze"/>
-        <feComponentTransfer in="haze" result="hazeA"><feFuncA type="linear" slope="1.1"/></feComponentTransfer>
+        <feGaussianBlur in="shape" stdDeviation="9" result="haze"/>
+        <feComponentTransfer in="haze" result="hazeA"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
         <feComposite in="hazeA" in2="grainA" operator="in" result="hazeGrain"/>
-        <feGaussianBlur in="shape" stdDeviation="3.5" result="bleed"/>
-        <feComponentTransfer in="bleed" result="bleedA"><feFuncA type="linear" slope="1.2"/></feComponentTransfer>
+        <feGaussianBlur in="shape" stdDeviation="1.4" result="bleed"/>
+        <feComponentTransfer in="bleed" result="bleedA"><feFuncA type="linear" slope="0.7"/></feComponentTransfer>
         <feComposite in="bleedA" in2="grainA" operator="in" result="bleedGrain"/>
 
         <feMerge>
@@ -101,7 +104,7 @@
   <script>
     // Once the stencil font is in, fit the drawing to the word.
     (async () => {
-      try { await document.fonts.load('700 230px "Stardos Stencil"'); } catch (e) {}
+      try { await document.fonts.load('800 230px "Big Shoulders Stencil Display"'); } catch (e) {}
       const svg = document.getElementById('sign'), word = document.getElementById('word');
       const b = word.getBBox(), base = 200;   // the letters sit on the baseline; below it is just the font's descender room
       const pad = 50;
